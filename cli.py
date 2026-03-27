@@ -9,6 +9,21 @@ from regime.indicators import (
     trend_structure,
 )
 
+_GREEN  = "\033[32m"
+_RED    = "\033[31m"
+_YELLOW = "\033[33m"
+_RESET  = "\033[0m"
+
+
+def _regime_color(label: str) -> str:
+    if label == "BULLISH": return _GREEN
+    if label == "BEARISH": return _RED
+    return _YELLOW
+
+
+def _c(text: str, color: str) -> str:
+    return f"{color}{text}{_RESET}"
+
 
 
 TICKER_NAMES = {
@@ -68,26 +83,38 @@ def _print_ticker(ticker: str, df, ticker_regimes: dict) -> None:
     name_suffix = f"  ({display_name})" if display_name else ""
     print(f"\n{ticker}{name_suffix}  Close: {price:.2f}")
 
-    slope_sym = {True: "↑", False: "↓", None: "~"}
+    slope_sym = {True: _c("↑", _GREEN), False: _c("↓", _RED), None: "~"}
     ma_parts = []
     for period, ma in result["moving_averages"].items():
-        pos = "ABOVE" if ma["price_above"] else "BELOW"
+        pos = _c("ABOVE", _GREEN) if ma["price_above"] else _c("BELOW", _RED)
         sym = slope_sym[ma["slope_rising"]]
         ma_parts.append(f"{period}d {pos}{sym}")
     ma_str = "  ".join(ma_parts)
-    print(f"  MA:      {ma_str}  (+{result['above_count']}/-{result['below_count']} pos, +{result['rising_count']}/-{result['falling_count']} slope)")
+    ac, bc = result['above_count'], result['below_count']
+    rc, fc = result['rising_count'], result['falling_count']
+    pos_color = _GREEN if ac > bc else (_RED if bc > ac else "")
+    slope_color = _GREEN if rc > fc else (_RED if fc > rc else "")
+    pos_str   = _c(f"+{ac}/-{bc}", pos_color)   if pos_color   else f"+{ac}/-{bc}"
+    slope_str = _c(f"+{rc}/-{fc}", slope_color) if slope_color else f"+{rc}/-{fc}"
+    print(f"  MA:      {ma_str}  ({pos_str} pos, {slope_str} slope)")
 
     def _fmt_dist(name):
         d = levels["distance_pct"][name]
         return "N/A" if d is None else f"{d:+.1f}%"
     print(f"  Levels:  ATH {_fmt_dist('ath')}  RHigh {_fmt_dist('recent_high_252d')}  SHigh {_fmt_dist('last_swing_high')}  SLow {_fmt_dist('last_swing_low')}  PSLow {_fmt_dist('prior_significant_low')}")
 
-    print(f"  Trend:   {structure['label']} ({structure['reason']})")
+    trend_label = structure['label']
+    trend_col = _GREEN if trend_label == "UPTREND" else (_RED if trend_label == "DOWNTREND" else _YELLOW)
+    print(f"  Trend:   {_c(trend_label, trend_col)} ({structure['reason']})")
 
     regime = ticker_regime(result, structure, levels)
     ticker_regimes[ticker] = regime
     checks = regime["checks"]
-    print(f"  Regime:  {regime['label']}  +{regime['bullish_checks']}/-{regime['bearish_checks']} (net {regime['net_score']:+d})  MA={checks['ma']}  Trend={checks['trend']}  RHigh={checks['rhigh']}  PSLow={checks['pslow']}")
+    check_str = "  ".join(
+        f"{k}={_c(v, _regime_color(v.upper()))}" for k, v in checks.items()
+    )
+    regime_label = regime['label']
+    print(f"  Regime:  {_c(regime_label, _regime_color(regime_label))}  +{regime['bullish_checks']}/-{regime['bearish_checks']} (net {regime['net_score']:+d})  {check_str}")
 
 
 def _print_summary(label: str, ticker_regimes: dict, total_fetched: int) -> None:
@@ -95,8 +122,10 @@ def _print_summary(label: str, ticker_regimes: dict, total_fetched: int) -> None
     print(f"\n=== {label} Summary ===")
     for ticker, regime in ticker_regimes.items():
         display_name = SECTOR_NAMES.get(ticker, "") or TICKER_NAMES.get(ticker, "") or ticker
-        print(f"  {ticker:<20} {display_name:<30}  {regime['label']}")
-    print(f"Regime:        {summary['label']}")
+        lbl = regime['label']
+        print(f"  {ticker:<20} {display_name:<30}  {_c(lbl, _regime_color(lbl))}")
+    slbl = summary['label']
+    print(f"Regime:        {_c(slbl, _regime_color(slbl))}")
     print(f"Tickers used:  {summary['tickers_used']}")
     c = summary["counts"]
     print(f"Tickers:       bullish={c['bullish']} neutral={c['neutral']} bearish={c['bearish']}")
