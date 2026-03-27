@@ -1,9 +1,9 @@
 # Technical Regime (Beginner-Friendly)
 
-A simple market "health check" for major indexes, macro signals, and US sectors.
+A global market regime checklist covering 24 indexes and currency indexes across Americas, Europe, and Asia — plus 10 US sectors.
 
 This project does **not** try to predict the future.
-It gives you a clean checklist so you can see if market conditions look healthy, weak, or mixed.
+It gives you a clean, objective checklist so you can see whether market conditions look healthy, weak, or mixed — across the world, not just the US.
 
 ---
 
@@ -37,54 +37,79 @@ If `pip` doesn't work, try `pip3` instead.
 ### Step 4: Run it
 
 ```bash
-python cli.py
+python3 cli.py
 ```
 
-(Or `python3 cli.py` if `python` doesn't work.)
+That's it. You'll see a global market health report grouped by region. It takes a few seconds because it's downloading live market data.
 
-That's it. You'll see a market health report for all index tickers. It takes a few seconds because it's downloading live market data.
-
-To run **sector analysis** instead (comparing sectors against each other):
+To run **US sector analysis** instead:
 
 ```bash
-python cli.py --sectors
+python3 cli.py --sectors
 ```
 
 ### Step 5: Read the output
 
-The output shows you three things per ticker:
+For each ticker you'll see 5 lines:
 
-1. **Price vs MAs** — Is the price above or below the major trend lines?
-2. **MA slope** — Are those trend lines going up or down?
-3. **Trend** — Is the market making higher highs (stairs up) or lower lows (stairs down)?
+1. **Ticker + Close price** — what it is and where it's trading
+2. **MA line** — is price above or below each moving average, and is each MA rising (↑) or falling (↓)?
+3. **Levels line** — how far price is from key reference points (ATH, recent high, swing highs/lows)
+4. **Trend line** — is the market making higher highs (stairs up) or lower lows (stairs down)?
+5. **Regime line** — the overall verdict (BULLISH / BEARISH / NEUTRAL) and what drove it
 
-Then at the bottom, you'll see the **Regime** label (BULLISH / BEARISH / NEUTRAL) and a **Market Summary** across all tickers.
+Then at the end of each region you'll see a **Summary** listing every ticker's verdict, plus overall counts and average score.
 
 ### Step 6: Run tests (optional, for learning)
 
 ```bash
-python -m pytest -q
+python3 -m pytest -q
 ```
 
 This runs all the automated checks to make sure the code is working correctly. If you see all tests pass, everything is good.
 
 ### What the tickers mean
 
-**Indexes & Macro** (`python cli.py`):
+**Americas** (`python3 cli.py`):
 
 | Ticker | What it tracks |
 |--------|---------------|
-| SPY | S&P 500 (large US companies) |
-| DIA | Dow Jones Industrial Average (30 blue-chip stocks) |
-| QQQ | Nasdaq 100 (tech-heavy) |
-| IWM | Russell 2000 (small US companies) |
-| TLT | 20+ Year Treasury Bonds (safe haven / interest rate signal) |
-| GLD | Gold (inflation hedge / fear signal) |
-| SMH | Semiconductors (tech cycle leader) |
-| DX-Y.NYB | US Dollar Index (dollar strength — strong dollar can pressure stocks) |
-| ^TNX | 10-Year Treasury Yield (rising = higher rates, falling = flight to safety) |
+| ^VIX | CBOE Volatility Index — fear gauge |
+| ^GSPTSE | S&P/TSX Composite — Canadian market |
+| ^BVSP | Bovespa — Brazilian market |
+| DX-Y.NYB | US Dollar Index — dollar strength |
+| ^RUT | Russell 2000 — small US companies |
+| ^GSPC | S&P 500 — large US companies |
+| ^DJI | Dow Jones — 30 blue-chip US stocks |
+| ^IXIC | Nasdaq Composite — tech-heavy US market |
 
-**US Sectors** (`python cli.py --sectors`):
+**Europe** (`python3 cli.py`):
+
+| Ticker | What it tracks |
+|--------|---------------|
+| ^FTSE | FTSE 100 — UK market |
+| ^XDE | Euro Currency Index |
+| ^XDB | British Pound Index |
+| ^FCHI | CAC 40 — French market |
+| ^N100 | Euronext 100 — broad European market |
+| ^STOXX50E | EURO STOXX 50 — eurozone blue chips |
+| ^125904-USD-STRD | MSCI Europe — broad European equities |
+| ^GDAXI | DAX — German market |
+
+**Asia** (`python3 cli.py`):
+
+| Ticker | What it tracks |
+|--------|---------------|
+| 000001.SS | SSE Composite — Shanghai / Chinese market |
+| ^HSI | Hang Seng — Hong Kong market |
+| ^XDA | Australian Dollar Index |
+| ^AXJO | S&P/ASX 200 — Australian market |
+| ^XDN | Japanese Yen Index |
+| ^KS11 | KOSPI — South Korean market |
+| ^N225 | Nikkei 225 — Japanese market |
+| ^BSESN | S&P BSE Sensex — Indian market |
+
+**US Sectors** (`python3 cli.py --sectors`):
 
 | Ticker | Sector |
 |--------|--------|
@@ -101,9 +126,9 @@ This runs all the automated checks to make sure the code is working correctly. I
 
 ### What to do with the output
 
-- **All tickers BULLISH** — Market looks broadly healthy
-- **All tickers BEARISH** — Market looks broadly weak
-- **Mixed** — Normal. Different parts of the market don't always agree. Read the "How to Interpret Regime Conflict" section below for help.
+- **All tickers BULLISH** — Market looks broadly healthy globally
+- **All tickers BEARISH** — Market looks broadly weak globally
+- **Mixed** — Normal. Different regions and markets don't always agree.
 
 ### If something goes wrong
 
@@ -124,7 +149,12 @@ This runs all the automated checks to make sure the code is working correctly. I
 | HH/HL | Higher High / Higher Low — stairs going up |
 | LH/LL | Lower High / Lower Low — stairs going down |
 | ATH | All-Time High — the highest price ever recorded |
+| RHigh | Recent high — highest price in the last 252 trading days (~1 year) |
+| SHigh / SLow | Last confirmed swing high / swing low |
+| PSLow | Prior significant low — the swing low before the most recent one |
 | Regime | The overall "mood" of the market based on all checks combined |
+| ↑ | Rising — the MA is sloping upward |
+| ↓ | Falling — the MA is sloping downward |
 
 ---
 
@@ -144,173 +174,86 @@ Think of this tool like two things at once:
 ### 2) MA slope = Warming up or cooling down
 
 - Is each moving average rising or falling?
-- Rising = trend gaining strength
-- Falling = trend losing strength
+- Rising (↑) = trend gaining strength
+- Falling (↓) = trend losing strength
 
 ### 3) Trend structure (swings) = Staircase direction
 
-- Are highs and lows getting higher? -> stairs up
-- Are highs and lows getting lower? -> stairs down
-- Mixed pattern? -> choppy/noisy market
+- Are highs and lows getting higher? → stairs up (UPTREND)
+- Are highs and lows getting lower? → stairs down (DOWNTREND)
+- Mixed pattern? → choppy/noisy market
+
+### 4) Key levels = How far from important price points
+
+- Close to ATH or recent high = bullish
+- Far below recent high = bearish
+- Well above prior swing low = healthy
+- At or below prior swing low = warning sign
 
 ---
 
-## What We Have Built So Far (Phases 1 to 6)
+## How the Regime Score Works
 
-## Phase 1: Data Foundation
+Each ticker gets **4 checks**, each scored bullish, neutral, or bearish:
 
-- Pulls daily OHLCV data using `yfinance`
-- Index tickers: `SPY`, `DIA`, `QQQ`, `IWM`, `TLT`, `GLD`, `SMH`, `DX-Y.NYB`, `^TNX`
-- Sector tickers: `XLE`, `XLU`, `XLRE`, `XLP`, `XLF`, `XLB`, `XLY`, `XLI`, `XLC`, `XLK`
-- Validates minimum history for long moving averages
+| Check | What it measures | Bullish condition | Bearish condition |
+|-------|-----------------|-------------------|-------------------|
+| MA | Position + slope combined | Price above 4+ MAs AND 4+ MAs rising | Price below 4+ MAs AND 4+ MAs falling |
+| Trend | Swing structure | UPTREND (HH/HL) | DOWNTREND (LH/LL) |
+| RHigh | Distance from 252-day high | Within 2% of recent high | More than 8% below recent high |
+| PSLow | Distance above prior swing low | More than 3% above | At or below prior low |
 
-Files:
-- `regime/data.py`
+**Net score** = bullish checks − bearish checks
 
-## Phase 2: Moving Averages + Price Position
+- Net ≥ +2 → **BULLISH**
+- Net ≤ −2 → **BEARISH**
+- Otherwise → **NEUTRAL**
 
-- Computes SMA: `10, 20, 50, 100, 200`
-- Checks if current price is above/below each MA
-- Counts bullish/bearish MA positions
-
-## Phase 3: MA Slope
-
-- Compares MA today vs MA 5 trading days ago
-- Marks each MA as `RISING` or `FALLING`
-- Counts rising/falling MA slopes
-
-## Phase 4: Trend Structure (Swing Logic)
-
-- Finds confirmed swing highs/lows using `High` and `Low`
-- Uses strict rule for ties (flat tops/bottoms are ignored)
-- Labels structure:
-  - `UPTREND` (`HH/HL`)
-  - `DOWNTREND` (`LH/LL`)
-  - `MIXED` (`HH/LL`, `HL/LH`, etc.)
-  - `INSUFFICIENT` (not enough swing evidence yet)
-
-Files:
-- `regime/indicators.py`
-- `cli.py`
-- `test_indicators.py`
-
-## Phase 5: Key Levels
-
-- Computes All-Time High (ATH) and 252-day recent high
-- Pulls last swing high, last swing low, and prior significant low from trend structure
-- Calculates percent distance from current price to each level
-- Reuses trend structure output to avoid redundant computation
-
-## Phase 6: Regime Aggregation
-
-- 4 checks per ticker: MA cluster, Trend, Recent High distance, Prior Significant Low distance
-- MA cluster combines position + slope into one signal (both must agree to count)
-- Contradiction guard: if MA cluster and Trend disagree, ticker is forced NEUTRAL
-- Ticker labels: BULLISH (net >= +2), BEARISH (net <= -2), NEUTRAL (otherwise)
-- Market-wide regime: majority vote across all tickers
-- Resilient fetching: if a ticker fails to download, the rest still run
+**Contradiction guard:** if MA and Trend directly contradict each other, the ticker is forced NEUTRAL regardless of score.
 
 ---
 
-## CLI Output: How to Read It
-
-For each ticker, the CLI prints:
-
-1. Current close
-2. Each moving average line with:
-   - MA value
-   - `ABOVE` or `BELOW`
-   - `RISING` or `FALLING`
-   - percent distance from MA
-3. Summary counts:
-   - `Price vs MA: +x/-y`
-   - `MA slope: +x/-y`
-4. Trend structure:
-   - `Trend: UPTREND (HH/HL)` (or other label/reason)
-
-## Example Output (with plain-English meaning)
+## Example Output
 
 ```text
-SPY  Close: 612.34
-   10-day MA:   608.10  ABOVE  RISING  (+0.7%)
-   20-day MA:   603.55  ABOVE  RISING  (+1.5%)
-   50-day MA:   590.20  ABOVE  RISING  (+3.7%)
-  100-day MA:   575.90  ABOVE  RISING  (+6.3%)
-  200-day MA:   548.40  ABOVE  RISING  (+11.7%)
-  Price vs MA:  +5/-0
-  MA slope:     +5/-0
-  Trend:        UPTREND (HH/HL)
+^GSPC  (S&P 500)  Close: 6418.37
+  MA:      10d BELOW↓  20d BELOW↓  50d BELOW↓  100d BELOW↓  200d BELOW↑  (+0/-5 pos, +1/-4 slope)
+  Levels:  ATH -8.3%  RHigh -8.3%  SHigh -8.2%  SLow -5.3%  PSLow -5.3%
+  Trend:   DOWNTREND (LH/LL)
+  Regime:  BEARISH  +0/-4 (net -4)  MA=bearish  Trend=bearish  RHigh=bearish  PSLow=bearish
 ```
 
-How to read this quickly:
+How to read this:
 
-- `Close: 612.34` -> current price right now
-- Each MA line -> where price is vs that timeframe trend
-- `ABOVE` + `RISING` together -> strongest bullish combo
-- `Price vs MA: +5/-0` -> above all 5 MAs
-- `MA slope: +5/-0` -> all 5 trends are rising
-- `Trend: UPTREND (HH/HL)` -> staircase still going up (higher highs + higher lows)
-
-Fast 10-second scan rule:
-
-1. Check `Price vs MA`
-2. Check `MA slope`
-3. Check `Trend`
-4. If all 3 agree bullish or bearish, signal is clean. If not, treat as mixed/choppy.
-
-Bearish comparison example:
+- `10d BELOW↓` → price is below the 10-day MA, and that MA is falling — double bearish
+- `200d BELOW↑` → price is below the 200-day MA, but at least that MA is still rising — mixed
+- `+0/-5 pos` → below all 5 moving averages
+- `+1/-4 slope` → 4 of 5 MAs are falling
+- `ATH -8.3%` → price is 8.3% below its all-time high
+- `PSLow -5.3%` → price has already broken below the prior significant swing low — bearish signal
+- `Regime: BEARISH` → all 4 checks agree bearish, net score −4
 
 ```text
-QQQ  Close: 438.22
-   10-day MA:   442.10  BELOW  FALLING  (-0.9%)
-   20-day MA:   448.35  BELOW  FALLING  (-2.3%)
-   50-day MA:   459.80  BELOW  FALLING  (-4.7%)
-  100-day MA:   471.20  BELOW  FALLING  (-7.0%)
-  200-day MA:   489.60  BELOW  FALLING  (-10.5%)
-  Price vs MA:  +0/-5
-  MA slope:     +0/-5
-  Trend:        DOWNTREND (LH/LL)
+^BVSP  (Bovespa Index)  Close: 182803.27
+  MA:      10d ABOVE↑  20d ABOVE↓  50d ABOVE↑  100d ABOVE↑  200d ABOVE↑  (+5/-0 pos, +4/-1 slope)
+  Levels:  ATH -5.1%  RHigh -5.1%  SHigh -5.1%  SLow +16.9%  PSLow +17.8%
+  Trend:   UPTREND (HH/HL)
+  Regime:  BULLISH  +3/-0 (net +3)  MA=bullish  Trend=bullish  RHigh=neutral  PSLow=bullish
 ```
 
-What this means in baby terms:
+How to read this:
 
-- Price is below all major trend lines
-- Those trend lines are still sloping down
-- Market structure is making lower highs + lower lows
-- This is a clean bearish alignment (the opposite of the bullish example)
-
-### Baby tip
-
-If you see:
-- Price mostly above MAs
-- Slopes mostly rising
-- Trend is `UPTREND`
-
-...that is a strong "healthy" read.
-
-If signals disagree, that is normal. Mixed markets happen often.
+- `+5/-0 pos` → above all 5 MAs
+- `+4/-1 slope` → 4 of 5 MAs still rising
+- `PSLow +17.8%` → price is 17.8% above the prior swing low — a lot of cushion
+- `Trend: UPTREND (HH/HL)` → staircase still going up
+- `Regime: BULLISH` → 3 of 4 checks bullish, net score +3
 
 ---
 
 ## How to Interpret Regime Conflict
 
-A "regime conflict" is when the three checks disagree with each other. This is common and does not mean something is broken — it just means the market is sending mixed signals.
-
-### What conflict looks like
-
-```text
-SPY  Close: 561.10
-   10-day MA:   548.20  ABOVE  RISING  (+2.3%)
-   20-day MA:   553.80  ABOVE  RISING  (+1.3%)
-   50-day MA:   558.40  ABOVE  FALLING (-0.4%)
-  100-day MA:   545.90  ABOVE  FALLING (+2.8%)
-  200-day MA:   530.10  ABOVE  FALLING (+5.8%)
-  Price vs MA:  +5/-0
-  MA slope:     +2/-3
-  Trend:        MIXED (HH/LL)
-```
-
-Price is above all MAs (bullish), but most slopes are falling and trend structure is mixed. Three checks, three different answers.
+A "regime conflict" is when the checks disagree. This is common and does not mean something is broken — it means the market is sending mixed signals.
 
 ### How to read conflict
 
@@ -318,26 +261,18 @@ Price is above all MAs (bullish), but most slopes are falling and trend structur
 |---|---|
 | Price above MAs, but slopes falling | Rally is losing momentum — trend lines starting to roll over |
 | Price below MAs, but slopes rising | Possible early recovery — but not confirmed yet |
-| Uptrend structure, but price below MAs | Structure still intact from prior move, price pulling back inside it |
-| Downtrend structure, but price above short MAs | Short-term bounce inside a longer downtrend |
-| All three agree bullish | Clean bull regime — least conflicted |
-| All three agree bearish | Clean bear regime — least conflicted |
+| UPTREND structure, but price below MAs | Structure still intact from prior move, price pulling back inside it |
+| DOWNTREND structure, but price above short MAs | Short-term bounce inside a longer downtrend |
+| All checks agree bullish | Clean bull regime — least conflicted |
+| All checks agree bearish | Clean bear regime — least conflicted |
 
 ### The golden rule for conflict
 
 **Count the agreements, not just the disagreements.**
 
-- 3/3 agree = clean signal, act with more confidence
-- 2/3 agree = leaning one way, but treat as cautious
-- 1/3 agree = no clear regime, reduce conviction
-
-### Common conflict patterns
-
-**"Rising price, falling slopes"** — Price climbed fast but MAs have not caught up yet, or the move is stalling. Watch if slopes start rising again or price pulls back to MAs.
-
-**"Mixed trend, clean MAs"** — Swing structure is choppy but MAs are still aligned. Often happens after a sharp move that breaks the prior swing pattern. MAs tend to be more stable here.
-
-**"INSUFFICIENT trend"** — Not enough confirmed swings yet. This happens on new data, low-volatility stretches, or right after a sharp reversal. Not a bearish signal on its own — just not enough evidence yet.
+- 4/4 agree = cleanest possible signal
+- 3/4 agree = leaning one way, but treat as cautious
+- 2/4 agree = no clear regime, reduce conviction
 
 ### Baby tip for conflict
 
@@ -349,38 +284,27 @@ Short-term signals flip often. Longer signals change slowly and carry more weigh
 
 ---
 
-## Quick Start
-
-## 1) Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-## 2) Run the CLI
-
-```bash
-python cli.py
-```
-
-## 3) Run tests
-
-```bash
-python -m pytest -q
-```
-
----
-
 ## Project Structure
 
 ```text
 technical-regime/
-  cli.py
-  requirements.txt
+  cli.py               # runs the report — start here
+  requirements.txt     # dependencies (yfinance, pandas)
   regime/
-    data.py
-    indicators.py
-  test_indicators.py
+    data.py            # fetches and validates market data
+    indicators.py      # all the math: MAs, trend, key levels, regime scoring
+  test_indicators.py   # 29 automated tests
+```
+
+---
+
+## Quick Start
+
+```bash
+pip install -r requirements.txt   # one-time setup
+python3 cli.py                    # global market report
+python3 cli.py --sectors          # US sector breakdown
+python3 -m pytest -q              # run all tests
 ```
 
 ---
@@ -389,7 +313,7 @@ technical-regime/
 
 - This is a checklist tool, not financial advice.
 - It is designed for clarity first, complexity later.
-- We are intentionally building in phases so each step is testable and easy to understand.
+- If a ticker fails to fetch data, it is skipped automatically — the rest of the report still runs.
 
 ---
 
@@ -399,11 +323,10 @@ technical-regime/
 - Historical regime tracking (save daily snapshots)
 - Multi-timeframe analysis (weekly + daily)
 - Sector rotation signals
-- Export to CSV or dashboard
+- Export to CSV or simple dashboard
 
 ---
 
 ## One-Line Summary
 
-This project is your market "dashboard light system":
-**green when many checks agree bullish, red when many checks agree bearish, yellow when signals conflict.**
+Global market regime dashboard: **24 indexes across Americas, Europe, and Asia** scored on MA position, MA slope, trend structure, and key levels — green when signals agree bullish, red when bearish, yellow when mixed.
