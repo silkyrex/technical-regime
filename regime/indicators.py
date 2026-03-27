@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pandas as pd
 
 MA_PERIODS = [10, 20, 50, 100, 200]
@@ -75,9 +77,11 @@ def trend_structure(df: pd.DataFrame, window: int = SWING_WINDOW) -> dict:
         center_low = lows.iloc[i]
 
         # Strict-only extrema: center must be the unique max/min in its window.
-        if center_high == high_window.max() and (high_window == center_high).sum() == 1:
+        max_val = high_window.max()
+        if center_high == max_val and (high_window == max_val).sum() == 1:
             swing_highs.append({"index": i, "date": df.index[i], "price": float(center_high)})
-        if center_low == low_window.min() and (low_window == center_low).sum() == 1:
+        min_val = low_window.min()
+        if center_low == min_val and (low_window == min_val).sum() == 1:
             swing_lows.append({"index": i, "date": df.index[i], "price": float(center_low)})
 
     if len(swing_highs) < 2 or len(swing_lows) < 2:
@@ -128,8 +132,11 @@ def _distance_pct(price: float, level: float | None) -> float | None:
     return (price - level) / level * 100
 
 
-def key_levels(df: pd.DataFrame) -> dict:
-    """Compute key levels and price distance to each level."""
+def key_levels(df: pd.DataFrame, trend_result: dict | None = None) -> dict:
+    """Compute key levels and price distance to each level.
+
+    Pass trend_result to reuse an already-computed trend_structure output.
+    """
     if "High" not in df.columns or "Close" not in df.columns:
         raise ValueError("DataFrame must include High and Close columns.")
 
@@ -145,7 +152,7 @@ def key_levels(df: pd.DataFrame) -> dict:
     swing_source = "ok"
     swing_error = None
     try:
-        structure = trend_structure(df)
+        structure = trend_result if trend_result is not None else trend_structure(df)
         if structure["swing_highs"]:
             last_swing_high = float(structure["swing_highs"][-1]["price"])
         if structure["swing_lows"]:
@@ -153,7 +160,6 @@ def key_levels(df: pd.DataFrame) -> dict:
         if len(structure["swing_lows"]) >= 2:
             prior_significant_low = float(structure["swing_lows"][-2]["price"])
     except ValueError as exc:
-        # Missing swing inputs should not prevent key level output.
         swing_source = "unavailable"
         swing_error = str(exc)
 

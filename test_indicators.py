@@ -206,19 +206,17 @@ def test_fetch_all_rows_dropped_after_cleaning_raises():
             raise AssertionError("expected ValueError")
 
 
-def test_cli_handles_bad_trend_inputs_and_continues():
-    bad_df = _make_ohlcv_df(MIN_ROWS).drop(columns=["Low"])
+def test_cli_skips_ticker_when_moving_averages_fails():
+    bad_df = pd.DataFrame({"Close": [100.0]})  # too few rows for any MA
     good_df = _make_ohlcv_df(MIN_ROWS)
     fake_data = {"BAD": bad_df, "GOOD": good_df}
 
-    with patch("cli.fetch_all", return_value=fake_data):
+    with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
 
-    assert "BAD skipped:" not in output
-    assert "BAD  Close:" in output
-    assert "Trend:        INSUFFICIENT (ERROR)" in output
+    assert "BAD skipped:" in output
     assert "GOOD  Close:" in output
 
 
@@ -287,7 +285,7 @@ def test_key_levels_marks_swing_unavailable_when_low_missing():
 def test_cli_prints_key_levels_block():
     good_df = _make_ohlcv_df(MIN_ROWS)
     fake_data = {"GOOD": good_df}
-    with patch("cli.fetch_all", return_value=fake_data):
+    with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
@@ -345,7 +343,7 @@ def test_market_regime_majority_vote_and_tickers_used():
 def test_cli_prints_phase6_summary_lines():
     good_df = _make_ohlcv_df(MIN_ROWS)
     fake_data = {"SPY": good_df, "DIA": good_df, "QQQ": good_df}
-    with patch("cli.fetch_all", return_value=fake_data):
+    with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()

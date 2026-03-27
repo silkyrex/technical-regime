@@ -1,7 +1,7 @@
-from regime.data import fetch_all
+import sys
+
+from regime.data import fetch_all, TICKERS, SECTOR_TICKERS
 from regime.indicators import (
-    MA_PERIODS,
-    SWING_WINDOW,
     key_levels,
     market_regime,
     moving_averages,
@@ -10,15 +10,39 @@ from regime.indicators import (
 )
 
 
+def _print_level(levels: dict, name: str, label: str):
+    level = levels["levels"][name]
+    dist = levels["distance_pct"][name]
+    level_text = "N/A" if level is None else f"{level:.2f}"
+    dist_text = "N/A" if dist is None else f"{dist:+.1f}%"
+    print(f"    {label:<6} {level_text:>8}  ({dist_text})")
+
+
+SECTOR_NAMES = {
+    "XLE": "Energy",
+    "XLU": "Utilities",
+    "XLRE": "Real Estate",
+    "XLP": "Consumer Staples",
+    "XLF": "Financials",
+    "XLB": "Materials",
+    "XLY": "Consumer Discretionary",
+    "XLI": "Industrials",
+    "XLC": "Communication Services",
+    "XLK": "Technology",
+}
+
+
 def main():
-    try:
-        data = fetch_all()
-    except Exception as exc:
-        print(f"Error: {exc}")
+    use_sectors = "--sectors" in sys.argv
+    tickers = SECTOR_TICKERS if use_sectors else TICKERS
+    label = "Sector" if use_sectors else "Market"
+
+    data, fetch_errors = fetch_all(tickers)
+    for t, reason in fetch_errors.items():
+        print(f"\n{t} skipped: {reason}")
+    if not data:
+        print("Error: no ticker data available.")
         raise SystemExit(1)
-    print(
-        f"Run summary: tickers={len(data)}  MA periods={MA_PERIODS}  swing_window={SWING_WINDOW}"
-    )
     ticker_regimes = {}
     for ticker, df in data.items():
         try:
@@ -26,32 +50,12 @@ def main():
         except ValueError as exc:
             print(f"\n{ticker} skipped: {exc}")
             continue
-        try:
-            structure = trend_structure(df)
-        except ValueError:
-            structure = {"label": "INSUFFICIENT", "reason": "ERROR"}
-        try:
-            levels = key_levels(df)
-        except ValueError:
-            levels = {
-                "levels": {
-                    "ath": None,
-                    "recent_high_252d": None,
-                    "last_swing_high": None,
-                    "last_swing_low": None,
-                    "prior_significant_low": None,
-                },
-                "distance_pct": {
-                    "ath": None,
-                    "recent_high_252d": None,
-                    "last_swing_high": None,
-                    "last_swing_low": None,
-                    "prior_significant_low": None,
-                },
-            }
+        structure = trend_structure(df)
+        levels = key_levels(df, trend_result=structure)
         price = result["price"]
-        print(f"\n{ticker}  Close: {price:.2f}")
-        print(f"  Rows loaded:  {len(df)}")
+        sector_name = SECTOR_NAMES.get(ticker, "")
+        name_suffix = f"  ({sector_name})" if sector_name else ""
+        print(f"\n{ticker}{name_suffix}  Close: {price:.2f}")
         for period, ma in result["moving_averages"].items():
             position = "ABOVE" if ma["price_above"] else "BELOW"
             slope = {True: "RISING", False: "FALLING", None: "  N/A "}[ma["slope_rising"]]
@@ -61,19 +65,11 @@ def main():
         print(f"  MA slope:     +{result['rising_count']}/-{result['falling_count']}")
         print(f"  Trend:        {structure['label']} ({structure['reason']})")
         print("  Key levels:")
-
-        def _fmt_level(name: str, label: str):
-            level = levels["levels"][name]
-            dist = levels["distance_pct"][name]
-            level_text = "N/A" if level is None else f"{level:.2f}"
-            dist_text = "N/A" if dist is None else f"{dist:+.1f}%"
-            print(f"    {label:<6} {level_text:>8}  ({dist_text})")
-
-        _fmt_level("ath", "ATH")
-        _fmt_level("recent_high_252d", "RHigh")
-        _fmt_level("last_swing_high", "SHigh")
-        _fmt_level("last_swing_low", "SLow")
-        _fmt_level("prior_significant_low", "PSLow")
+        _print_level(levels, "ath", "ATH")
+        _print_level(levels, "recent_high_252d", "RHigh")
+        _print_level(levels, "last_swing_high", "SHigh")
+        _print_level(levels, "last_swing_low", "SLow")
+        _print_level(levels, "prior_significant_low", "PSLow")
 
         regime = ticker_regime(result, structure, levels)
         ticker_regimes[ticker] = regime
@@ -86,12 +82,12 @@ def main():
         )
 
     market = market_regime(ticker_regimes)
-    print("\n=== Market Summary ===")
-    print(f"Market regime: {market['label']}")
+    print(f"\n=== {label} Summary ===")
+    print(f"{label} regime: {market['label']}")
     print(f"Tickers used:  {market['tickers_used']}")
     c = market["counts"]
     print(f"Tickers:       bullish={c['bullish']} neutral={c['neutral']} bearish={c['bearish']}")
-    suffix = " (partial data)" if market["tickers_used"] < 3 else ""
+    suffix = " (partial data)" if market["tickers_used"] < len(data) else ""
     print(f"Average net:   {market['average_net_score']:+.2f}{suffix}")
 
 

@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import yfinance as yf
 import pandas as pd
 
-TICKERS = ["SPY", "DIA", "QQQ"]
+TICKERS = ["SPY", "DIA", "QQQ", "IWM", "TLT", "GLD", "SMH", "DX-Y.NYB", "^TNX"]
+SECTOR_TICKERS = ["XLE", "XLU", "XLRE", "XLP", "XLF", "XLB", "XLY", "XLI", "XLC", "XLK"]
 MIN_ROWS = 200
 REQUIRED_COLUMNS = ["Open", "High", "Low", "Close"]
 
@@ -24,6 +27,15 @@ def fetch(ticker: str, period: str = "2y") -> pd.DataFrame:
         raise ValueError(f"Only {len(df)} rows for {ticker}. Need at least {MIN_ROWS}.")
     return df
 
-def fetch_all(period: str = "2y") -> dict[str, pd.DataFrame]:
-    """Fetch data for all tickers. Returns {"SPY": df, "DIA": df, "QQQ": df}."""
-    return {t: fetch(t, period) for t in TICKERS}
+def fetch_all(tickers: list[str] | None = None, period: str = "2y") -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
+    """Fetch data for given tickers (defaults to TICKERS). Returns (data, errors) dicts."""
+    if tickers is None:
+        tickers = TICKERS
+    results = {}
+    errors = {}
+    for t in tickers:
+        try:
+            results[t] = fetch(t, period)
+        except ValueError as exc:
+            errors[t] = str(exc)
+    return results, errors
