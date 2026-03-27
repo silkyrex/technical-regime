@@ -3,7 +3,11 @@ from regime.indicators import moving_averages
 
 
 def main():
-    data = fetch_all()
+    try:
+        data = fetch_all()
+    except Exception as exc:
+        print(f"Error: {exc}")
+        raise SystemExit(1)
     for ticker, df in data.items():
         result = moving_averages(df)
         price = result["price"]

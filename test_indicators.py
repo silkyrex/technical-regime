@@ -46,3 +46,24 @@ def test_price_above_still_works():
     result = moving_averages(_make_df(closes))
     assert result["above_count"] == len(MA_PERIODS)
     assert result["below_count"] == 0
+
+
+def test_not_enough_data_raises():
+    """Too few rows: at least one MA is NaN at the last bar."""
+    try:
+        moving_averages(_make_df([100.0]))
+    except ValueError as exc:
+        assert "Not enough data" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_flat_series_slope_not_rising():
+    """Flat price: MA equals prior-week MA, so slope is not rising (counts as falling)."""
+    n = max(MA_PERIODS) + SLOPE_LOOKBACK + 1
+    closes = [100.0] * n
+    result = moving_averages(_make_df(closes))
+    for period, ma in result["moving_averages"].items():
+        assert ma["slope_rising"] is False, f"{period}-day MA flat should not be rising"
+    assert result["rising_count"] == 0
+    assert result["falling_count"] == len(MA_PERIODS)

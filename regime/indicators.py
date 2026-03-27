@@ -5,7 +5,11 @@ SLOPE_LOOKBACK = 5  # trading days (one week) to measure MA direction
 
 
 def moving_averages(df: pd.DataFrame) -> dict:
-    """Compute SMAs, price-relative position, and slope direction for a single ticker."""
+    """Compute SMAs, price-relative position, and slope direction for a single ticker.
+
+    Slope compares today's MA to the value SLOPE_LOOKBACK bars ago. If equal (flat),
+    slope_rising is False — same as falling for the printed +rising / -falling counts.
+    """
     close = df["Close"]
     current_price = close.iloc[-1]
 
@@ -14,13 +18,12 @@ def moving_averages(df: pd.DataFrame) -> dict:
         ma_series = close.rolling(period).mean()
         ma_value = ma_series.iloc[-1]
         if pd.isna(ma_value):
-            raise SystemExit(f"Not enough data to compute {period}-day MA.")
+            raise ValueError(f"Not enough data to compute {period}-day MA.")
 
         prior_value = ma_series.iloc[-(SLOPE_LOOKBACK + 1)]
         slope_rising = None if pd.isna(prior_value) else bool(ma_value > prior_value)
 
         results[period] = {
-            "series": ma_series,
             "value": ma_value,
             "price_above": current_price > ma_value,
             "slope_rising": slope_rising,
