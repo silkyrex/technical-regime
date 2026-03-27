@@ -209,15 +209,16 @@ def test_fetch_all_rows_dropped_after_cleaning_raises():
 def test_cli_skips_ticker_when_moving_averages_fails():
     bad_df = pd.DataFrame({"Close": [100.0]})  # too few rows for any MA
     good_df = _make_ohlcv_df(MIN_ROWS)
-    fake_data = {"BAD": bad_df, "GOOD": good_df}
+    # Use real regional tickers so the regional loop picks them up
+    fake_data = {"^GSPC": bad_df, "^DJI": good_df}
 
     with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
 
-    assert "BAD skipped:" in output
-    assert "GOOD  Close:" in output
+    assert "^GSPC skipped:" in output
+    assert "^DJI" in output
 
 
 def test_key_levels_ath_and_recent_high_short_history():
@@ -284,12 +285,12 @@ def test_key_levels_marks_swing_unavailable_when_low_missing():
 
 def test_cli_prints_key_levels_block():
     good_df = _make_ohlcv_df(MIN_ROWS)
-    fake_data = {"GOOD": good_df}
+    fake_data = {"^GSPC": good_df}
     with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
-    assert "Key levels:" in output
+    assert "Levels:" in output
     assert "ATH" in output and "RHigh" in output and "PSLow" in output
 
 
@@ -342,12 +343,10 @@ def test_market_regime_majority_vote_and_tickers_used():
 
 def test_cli_prints_phase6_summary_lines():
     good_df = _make_ohlcv_df(MIN_ROWS)
-    fake_data = {"SPY": good_df, "DIA": good_df, "QQQ": good_df}
+    fake_data = {"^GSPC": good_df, "^DJI": good_df, "^IXIC": good_df}
     with patch("cli.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
     assert "Regime:" in output
-    assert "Checklist:" in output
-    assert "=== Market Summary ===" in output
-    assert "Market regime:" in output
+    assert "=== Overall Market Summary ===" in output

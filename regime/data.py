@@ -3,7 +3,17 @@ from __future__ import annotations
 import yfinance as yf
 import pandas as pd
 
-TICKERS = ["SPY", "DIA", "QQQ", "IWM", "TLT", "GLD", "SMH", "DX-Y.NYB", "^TNX"]
+AMERICAS_TICKERS = ["^VIX", "^GSPTSE", "^BVSP", "DX-Y.NYB", "^RUT", "^GSPC", "^DJI", "^IXIC"]
+EUROPE_TICKERS   = ["^FTSE", "^XDE", "^XDB", "^FCHI", "^N100", "^STOXX50E", "^125904-USD-STRD", "^GDAXI"]
+ASIA_TICKERS     = ["000001.SS", "^HSI", "^XDA", "^AXJO", "^XDN", "^KS11", "^N225", "^BSESN"]
+
+REGIONS = {
+    "Americas": AMERICAS_TICKERS,
+    "Europe":   EUROPE_TICKERS,
+    "Asia":     ASIA_TICKERS,
+}
+
+TICKERS = AMERICAS_TICKERS + EUROPE_TICKERS + ASIA_TICKERS
 SECTOR_TICKERS = ["XLE", "XLU", "XLRE", "XLP", "XLF", "XLB", "XLY", "XLI", "XLC", "XLK"]
 MIN_ROWS = 200
 REQUIRED_COLUMNS = ["Open", "High", "Low", "Close"]
