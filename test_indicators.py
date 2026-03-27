@@ -1,7 +1,15 @@
 import pandas as pd
 from unittest.mock import patch
 from io import StringIO
-from regime.indicators import key_levels, moving_averages, trend_structure, MA_PERIODS, SLOPE_LOOKBACK
+from regime.indicators import (
+    MA_PERIODS,
+    SLOPE_LOOKBACK,
+    key_levels,
+    market_regime,
+    moving_averages,
+    ticker_regime,
+    trend_structure,
+)
 from regime.data import fetch, MIN_ROWS
 from cli import main
 
@@ -285,3 +293,63 @@ def test_cli_prints_key_levels_block():
             output = fake_out.getvalue()
     assert "Key levels:" in output
     assert "ATH" in output and "RHigh" in output and "PSLow" in output
+
+
+def test_ticker_regime_bullish_case():
+    ma = {"above_count": 5, "below_count": 0, "rising_count": 5, "falling_count": 0}
+    trend = {"label": "UPTREND"}
+    levels = {"distance_pct": {"recent_high_252d": -1.0, "prior_significant_low": 4.0}}
+    result = ticker_regime(ma, trend, levels)
+    assert result["label"] == "BULLISH"
+    assert result["net_score"] >= 2
+
+
+def test_ticker_regime_bearish_case():
+    ma = {"above_count": 0, "below_count": 5, "rising_count": 0, "falling_count": 5}
+    trend = {"label": "DOWNTREND"}
+    levels = {"distance_pct": {"recent_high_252d": -10.0, "prior_significant_low": -1.0}}
+    result = ticker_regime(ma, trend, levels)
+    assert result["label"] == "BEARISH"
+    assert result["net_score"] <= -2
+
+
+def test_ticker_regime_contradiction_forces_neutral():
+    ma = {"above_count": 5, "below_count": 0, "rising_count": 5, "falling_count": 0}
+    trend = {"label": "DOWNTREND"}
+    levels = {"distance_pct": {"recent_high_252d": -1.0, "prior_significant_low": 4.0}}
+    result = ticker_regime(ma, trend, levels)
+    assert result["label"] == "NEUTRAL"
+
+
+def test_ticker_regime_missing_levels_neutral_checks():
+    ma = {"above_count": 4, "below_count": 1, "rising_count": 4, "falling_count": 1}
+    trend = {"label": "UPTREND"}
+    levels = {"distance_pct": {"recent_high_252d": None, "prior_significant_low": None}}
+    result = ticker_regime(ma, trend, levels)
+    assert result["checks"]["rhigh"] == "neutral"
+    assert result["checks"]["pslow"] == "neutral"
+
+
+def test_market_regime_majority_vote_and_tickers_used():
+    regs = {
+        "SPY": {"label": "BULLISH", "net_score": 2},
+        "DIA": {"label": "BULLISH", "net_score": 1},
+        "QQQ": {"label": "NEUTRAL", "net_score": 0},
+    }
+    result = market_regime(regs)
+    assert result["label"] == "BULLISH"
+    assert result["tickers_used"] == 3
+    assert result["counts"]["bullish"] == 2
+
+
+def test_cli_prints_phase6_summary_lines():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"SPY": good_df, "DIA": good_df, "QQQ": good_df}
+    with patch("cli.fetch_all", return_value=fake_data):
+        with patch("sys.stdout", new_callable=StringIO) as fake_out:
+            main()
+            output = fake_out.getvalue()
+    assert "Regime:" in output
+    assert "Checklist:" in output
+    assert "=== Market Summary ===" in output
+    assert "Market regime:" in output

@@ -4,6 +4,12 @@ MA_PERIODS = [10, 20, 50, 100, 200]
 SLOPE_LOOKBACK = 5  # trading days (one week) to measure MA direction
 SWING_WINDOW = 5
 RECENT_HIGH_WINDOW = 252
+R_HIGH_BULLISH_MIN = -2.0
+R_HIGH_BEARISH_MAX = -8.0
+P_SLOW_BULLISH_MIN = 3.0
+P_SLOW_BEARISH_MAX = 0.0
+REGIME_BULLISH_MIN = 2
+REGIME_BEARISH_MAX = -2
 
 
 def moving_averages(df: pd.DataFrame) -> dict:
@@ -167,4 +173,116 @@ def key_levels(df: pd.DataFrame) -> dict:
         "recent_high_window_used": recent_window_used,
         "swing_source": swing_source,
         "swing_error": swing_error,
+    }
+
+
+def _ma_cluster_signal(ma_result: dict) -> str:
+    pos = "neutral"
+    if ma_result["above_count"] >= 4:
+        pos = "bullish"
+    elif ma_result["below_count"] >= 4:
+        pos = "bearish"
+
+    slope = "neutral"
+    if ma_result["rising_count"] >= 4:
+        slope = "bullish"
+    elif ma_result["falling_count"] >= 4:
+        slope = "bearish"
+
+    if pos == slope and pos != "neutral":
+        return pos
+    return "neutral"
+
+
+def _trend_signal(trend_result: dict) -> str:
+    if trend_result["label"] == "UPTREND":
+        return "bullish"
+    if trend_result["label"] == "DOWNTREND":
+        return "bearish"
+    return "neutral"
+
+
+def _rhigh_signal(levels_result: dict) -> str:
+    dist = levels_result["distance_pct"].get("recent_high_252d")
+    if dist is None:
+        return "neutral"
+    if dist >= R_HIGH_BULLISH_MIN:
+        return "bullish"
+    if dist <= R_HIGH_BEARISH_MAX:
+        return "bearish"
+    return "neutral"
+
+
+def _pslow_signal(levels_result: dict) -> str:
+    dist = levels_result["distance_pct"].get("prior_significant_low")
+    if dist is None:
+        return "neutral"
+    if dist >= P_SLOW_BULLISH_MIN:
+        return "bullish"
+    if dist <= P_SLOW_BEARISH_MAX:
+        return "bearish"
+    return "neutral"
+
+
+def ticker_regime(ma_result: dict, trend_result: dict, levels_result: dict) -> dict:
+    checks = {
+        "ma": _ma_cluster_signal(ma_result),
+        "trend": _trend_signal(trend_result),
+        "rhigh": _rhigh_signal(levels_result),
+        "pslow": _pslow_signal(levels_result),
+    }
+
+    bullish_checks = sum(1 for v in checks.values() if v == "bullish")
+    bearish_checks = sum(1 for v in checks.values() if v == "bearish")
+    net_score = bullish_checks - bearish_checks
+
+    contradiction = {
+        ("bullish", "bearish"),
+        ("bearish", "bullish"),
+    }
+    if (checks["ma"], checks["trend"]) in contradiction:
+        label = "NEUTRAL"
+    elif net_score >= REGIME_BULLISH_MIN:
+        label = "BULLISH"
+    elif net_score <= REGIME_BEARISH_MAX:
+        label = "BEARISH"
+    else:
+        label = "NEUTRAL"
+
+    return {
+        "label": label,
+        "bullish_checks": bullish_checks,
+        "bearish_checks": bearish_checks,
+        "net_score": net_score,
+        "checks": checks,
+    }
+
+
+def market_regime(ticker_regimes: dict[str, dict]) -> dict:
+    counts = {"bullish": 0, "neutral": 0, "bearish": 0}
+    net_sum = 0
+    tickers_used = 0
+    for result in ticker_regimes.values():
+        tickers_used += 1
+        net_sum += result["net_score"]
+        if result["label"] == "BULLISH":
+            counts["bullish"] += 1
+        elif result["label"] == "BEARISH":
+            counts["bearish"] += 1
+        else:
+            counts["neutral"] += 1
+
+    if counts["bullish"] > counts["bearish"]:
+        label = "BULLISH"
+    elif counts["bearish"] > counts["bullish"]:
+        label = "BEARISH"
+    else:
+        label = "NEUTRAL"
+
+    avg_net = 0.0 if tickers_used == 0 else net_sum / tickers_used
+    return {
+        "label": label,
+        "counts": counts,
+        "tickers_used": tickers_used,
+        "average_net_score": avg_net,
     }

@@ -1,5 +1,13 @@
 from regime.data import fetch_all
-from regime.indicators import MA_PERIODS, SWING_WINDOW, key_levels, moving_averages, trend_structure
+from regime.indicators import (
+    MA_PERIODS,
+    SWING_WINDOW,
+    key_levels,
+    market_regime,
+    moving_averages,
+    ticker_regime,
+    trend_structure,
+)
 
 
 def main():
@@ -11,6 +19,7 @@ def main():
     print(
         f"Run summary: tickers={len(data)}  MA periods={MA_PERIODS}  swing_window={SWING_WINDOW}"
     )
+    ticker_regimes = {}
     for ticker, df in data.items():
         try:
             result = moving_averages(df)
@@ -65,6 +74,25 @@ def main():
         _fmt_level("last_swing_high", "SHigh")
         _fmt_level("last_swing_low", "SLow")
         _fmt_level("prior_significant_low", "PSLow")
+
+        regime = ticker_regime(result, structure, levels)
+        ticker_regimes[ticker] = regime
+        checks = regime["checks"]
+        print(f"  Regime:      {regime['label']}")
+        print(f"  Checklist:   +{regime['bullish_checks']}/-{regime['bearish_checks']} (net {regime['net_score']:+d})")
+        print(
+            "  Checks:      "
+            f"MA={checks['ma']}  Trend={checks['trend']}  RHigh={checks['rhigh']}  PSLow={checks['pslow']}"
+        )
+
+    market = market_regime(ticker_regimes)
+    print("\n=== Market Summary ===")
+    print(f"Market regime: {market['label']}")
+    print(f"Tickers used:  {market['tickers_used']}")
+    c = market["counts"]
+    print(f"Tickers:       bullish={c['bullish']} neutral={c['neutral']} bearish={c['bearish']}")
+    suffix = " (partial data)" if market["tickers_used"] < 3 else ""
+    print(f"Average net:   {market['average_net_score']:+.2f}{suffix}")
 
 
 if __name__ == "__main__":
