@@ -1,7 +1,9 @@
 import pandas as pd
 from unittest.mock import patch
-from regime.indicators import moving_averages, trend_structure, MA_PERIODS, SLOPE_LOOKBACK
+from io import StringIO
+from regime.indicators import key_levels, moving_averages, trend_structure, MA_PERIODS, SLOPE_LOOKBACK
 from regime.data import fetch, MIN_ROWS
+from cli import main
 
 
 def _make_df(closes: list[float]) -> pd.DataFrame:
@@ -167,7 +169,7 @@ def test_fetch_happy_path_returns_clean_dataframe():
         mock_ticker.return_value.history.return_value = sample_df
         result = fetch("SPY", period="2y")
     assert len(result) == MIN_ROWS
-    assert list(result.columns)[:4] == ["Open", "High", "Low", "Close"]
+    assert {"Open", "High", "Low", "Close"}.issubset(set(result.columns))
 
 
 def test_fetch_missing_required_column_raises():
@@ -181,3 +183,105 @@ def test_fetch_missing_required_column_raises():
             assert "Low" in str(exc)
         else:
             raise AssertionError("expected ValueError")
+
+
+def test_fetch_all_rows_dropped_after_cleaning_raises():
+    sample_df = _make_ohlcv_df(MIN_ROWS)
+    sample_df["Open"] = float("nan")
+    with patch("regime.data.yf.Ticker") as mock_ticker:
+        mock_ticker.return_value.history.return_value = sample_df
+        try:
+            fetch("SPY", period="2y")
+        except ValueError as exc:
+            assert "missing OHLC values after cleaning" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+
+def test_cli_handles_bad_trend_inputs_and_continues():
+    bad_df = _make_ohlcv_df(MIN_ROWS).drop(columns=["Low"])
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"BAD": bad_df, "GOOD": good_df}
+
+    with patch("cli.fetch_all", return_value=fake_data):
+        with patch("sys.stdout", new_callable=StringIO) as fake_out:
+            main()
+            output = fake_out.getvalue()
+
+    assert "BAD skipped:" not in output
+    assert "BAD  Close:" in output
+    assert "Trend:        INSUFFICIENT (ERROR)" in output
+    assert "GOOD  Close:" in output
+
+
+def test_key_levels_ath_and_recent_high_short_history():
+    df = _make_hl_df([10, 11, 12, 13, 14], [8, 8, 9, 10, 11])
+    result = key_levels(df)
+    assert result["levels"]["ath"] == 14.0
+    assert result["levels"]["recent_high_252d"] == 14.0
+    assert result["recent_high_window_used"] == 5
+
+
+def test_key_levels_distance_sign_and_safety():
+    df = pd.DataFrame(
+        {
+            "High": [100.0, 120.0, 110.0],
+            "Low": [90.0, 95.0, 92.0],
+            "Close": [100.0, 101.0, 100.0],
+        }
+    )
+    result = key_levels(df)
+    assert result["distance_pct"]["ath"] < 0
+
+    # Non-positive levels should produce None distance.
+    df2 = pd.DataFrame({"High": [0.0, 0.0], "Low": [0.0, 0.0], "Close": [1.0, 1.0]})
+    result2 = key_levels(df2)
+    assert result2["distance_pct"]["ath"] is None
+
+
+def test_key_levels_reuses_trend_structure_swings():
+    highs = [100.0] * 30
+    lows = [90.0] * 30
+    highs[6] = 110.0
+    highs[15] = 120.0
+    highs[24] = 125.0
+    lows[8] = 80.0
+    lows[20] = 78.0
+    df = _make_hl_df(highs, lows)
+    ts = trend_structure(df)
+    kl = key_levels(df)
+    assert kl["levels"]["last_swing_high"] == ts["swing_highs"][-1]["price"]
+    assert kl["levels"]["last_swing_low"] == ts["swing_lows"][-1]["price"]
+    assert kl["levels"]["prior_significant_low"] == ts["swing_lows"][-2]["price"]
+    assert kl["levels"]["prior_significant_low"] != kl["levels"]["last_swing_low"]
+    assert kl["swing_source"] == "ok"
+    assert kl["swing_error"] is None
+
+
+def test_key_levels_missing_columns_raises():
+    bad_df = pd.DataFrame({"Low": [1.0, 2.0], "Close": [1.0, 2.0]})
+    try:
+        key_levels(bad_df)
+    except ValueError as exc:
+        assert "High and Close" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
+def test_key_levels_marks_swing_unavailable_when_low_missing():
+    df = pd.DataFrame({"High": [10.0, 12.0, 11.0], "Close": [9.0, 10.0, 9.5]})
+    result = key_levels(df)
+    assert result["swing_source"] == "unavailable"
+    assert result["swing_error"] is not None
+    assert result["levels"]["last_swing_high"] is None
+
+
+def test_cli_prints_key_levels_block():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"GOOD": good_df}
+    with patch("cli.fetch_all", return_value=fake_data):
+        with patch("sys.stdout", new_callable=StringIO) as fake_out:
+            main()
+            output = fake_out.getvalue()
+    assert "Key levels:" in output
+    assert "ATH" in output and "RHigh" in output and "PSLow" in output

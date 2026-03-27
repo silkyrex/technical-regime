@@ -3,6 +3,7 @@ import pandas as pd
 MA_PERIODS = [10, 20, 50, 100, 200]
 SLOPE_LOOKBACK = 5  # trading days (one week) to measure MA direction
 SWING_WINDOW = 5
+RECENT_HIGH_WINDOW = 252
 
 
 def moving_averages(df: pd.DataFrame) -> dict:
@@ -111,4 +112,59 @@ def trend_structure(df: pd.DataFrame, window: int = SWING_WINDOW) -> dict:
         "swing_window": window,
         "swing_highs": last_highs,
         "swing_lows": last_lows,
+    }
+
+
+def _distance_pct(price: float, level: float | None) -> float | None:
+    """Return percent distance from level, or None when not computable."""
+    if level is None or level <= 0:
+        return None
+    return (price - level) / level * 100
+
+
+def key_levels(df: pd.DataFrame) -> dict:
+    """Compute key levels and price distance to each level."""
+    if "High" not in df.columns or "Close" not in df.columns:
+        raise ValueError("DataFrame must include High and Close columns.")
+
+    price = float(df["Close"].iloc[-1])
+    highs = df["High"]
+    ath = float(highs.max())
+    recent_window_used = min(RECENT_HIGH_WINDOW, len(highs))
+    recent_high = float(highs.tail(recent_window_used).max())
+
+    last_swing_high = None
+    last_swing_low = None
+    prior_significant_low = None
+    swing_source = "ok"
+    swing_error = None
+    try:
+        structure = trend_structure(df)
+        if structure["swing_highs"]:
+            last_swing_high = float(structure["swing_highs"][-1]["price"])
+        if structure["swing_lows"]:
+            last_swing_low = float(structure["swing_lows"][-1]["price"])
+        if len(structure["swing_lows"]) >= 2:
+            prior_significant_low = float(structure["swing_lows"][-2]["price"])
+    except ValueError as exc:
+        # Missing swing inputs should not prevent key level output.
+        swing_source = "unavailable"
+        swing_error = str(exc)
+
+    levels = {
+        "ath": ath,
+        "recent_high_252d": recent_high,
+        "last_swing_high": last_swing_high,
+        "last_swing_low": last_swing_low,
+        "prior_significant_low": prior_significant_low,
+    }
+    distance_pct = {name: _distance_pct(price, level) for name, level in levels.items()}
+
+    return {
+        "price": price,
+        "levels": levels,
+        "distance_pct": distance_pct,
+        "recent_high_window_used": recent_window_used,
+        "swing_source": swing_source,
+        "swing_error": swing_error,
     }
