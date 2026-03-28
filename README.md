@@ -26,13 +26,23 @@ This moves you into the project directory. Think of it like opening a folder on 
 
 ### Step 3: Install what the project needs
 
+**Recommended on Mac (avoids “permission denied” on system Python):** use a **virtual environment** inside this folder.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+You only create `.venv` once. Later, open a new terminal, `cd` to the project, then run `source .venv/bin/activate` before `cli.py` or Streamlit.
+
+**Alternative:** install into your user Python (may need `pip3`):
+
 ```bash
 pip install -r requirements.txt
 ```
 
-This downloads two things the project depends on: `yfinance` (gets stock data) and `pandas` (organizes data into tables). You only need to do this once.
-
-If `pip` doesn't work, try `pip3` instead.
+This installs `yfinance` (market data), `pandas` (tables), and `Streamlit` (web UI).
 
 ### Step 4: Run it
 
@@ -41,6 +51,29 @@ python3 cli.py
 ```
 
 That's it. You'll see a global market health report grouped by region. It takes a few seconds because it's downloading live market data.
+
+
+
+### Step 4b: Web UI (optional, same data)
+
+With your venv **activated** (see Step 3), run:
+
+```bash
+streamlit run app.py --server.address localhost
+```
+
+Or without activating: `.venv/bin/streamlit run app.py --server.address localhost`
+
+Open **http://localhost:8501** in your browser (Streamlit prints the URL). Use the sidebar for **Global indexes** vs **US sectors**, and **Refresh data** to bypass the ~2 minute cache and pull Yahoo again. The dev server uses **localhost** only (see `.streamlit/config.toml`).
+
+#### Web UI troubleshooting
+
+| Problem | What to try |
+|--------|-------------|
+| `No module named 'streamlit'` | Run `pip install -r requirements.txt` inside your activated `.venv` (or use `.venv/bin/pip install -r requirements.txt`). |
+| `Address already in use` / port busy | Another Streamlit is running. Stop it (Ctrl+C in that terminal) or run `streamlit run app.py --server.port 8502 --server.address localhost`. |
+| `Permission denied` when using `pip` | Use the **venv** flow in Step 3 instead of installing into system Python. |
+| Blank page or “no data” | Check internet; click **Refresh data**; wait for Yahoo to respond. |
 
 To run **US sector analysis** instead:
 
@@ -288,12 +321,15 @@ Short-term signals flip often. Longer signals change slowly and carry more weigh
 
 ```text
 technical-regime/
-  cli.py               # runs the report — start here
-  requirements.txt     # dependencies (yfinance, pandas)
+  cli.py               # terminal report
+  app.py               # Streamlit web UI (localhost)
+  requirements.txt     # yfinance, pandas, streamlit
   regime/
-    data.py            # fetches and validates market data
-    indicators.py      # all the math: MAs, trend, key levels, regime scoring
-  test_indicators.py   # 29 automated tests
+    data.py            # fetch + validate OHLC
+    indicators.py      # MAs, trend, levels, regime scoring
+    report.py          # build_regime_report() — shared by CLI + UI
+  test_indicators.py   # automated tests
+  .streamlit/config.toml   # bind Streamlit to localhost
 ```
 
 ---
@@ -301,9 +337,11 @@ technical-regime/
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt   # one-time setup
+python3 -m venv .venv && source .venv/bin/activate   # once per machine; then use activate in new terminals
+pip install -r requirements.txt
 python3 cli.py                    # global market report
 python3 cli.py --sectors          # US sector breakdown
+streamlit run app.py --server.address localhost   # web UI → http://localhost:8501
 python3 -m pytest -q              # run all tests
 ```
 
@@ -319,7 +357,7 @@ python3 -m pytest -q              # run all tests
 
 ## What's Next (Ideas)
 
-- Colorized terminal output (green/red/yellow)
+- Colorized terminal output (green/red/yellow) — web UI already color-codes regime
 - Historical regime tracking (save daily snapshots)
 - Multi-timeframe analysis (weekly + daily)
 - Sector rotation signals

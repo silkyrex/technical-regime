@@ -1,3 +1,5 @@
+import sys
+
 import pandas as pd
 from unittest.mock import patch
 from io import StringIO
@@ -11,6 +13,7 @@ from regime.indicators import (
     trend_structure,
 )
 from regime.data import fetch, MIN_ROWS
+from regime.report import build_regime_report
 from cli import main
 
 
@@ -212,7 +215,7 @@ def test_cli_skips_ticker_when_moving_averages_fails():
     # Use real regional tickers so the regional loop picks them up
     fake_data = {"^GSPC": bad_df, "^DJI": good_df}
 
-    with patch("cli.fetch_all", return_value=(fake_data, {})):
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
@@ -286,7 +289,7 @@ def test_key_levels_marks_swing_unavailable_when_low_missing():
 def test_cli_prints_key_levels_block():
     good_df = _make_ohlcv_df(MIN_ROWS)
     fake_data = {"^GSPC": good_df}
-    with patch("cli.fetch_all", return_value=(fake_data, {})):
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
@@ -344,9 +347,54 @@ def test_market_regime_majority_vote_and_tickers_used():
 def test_cli_prints_phase6_summary_lines():
     good_df = _make_ohlcv_df(MIN_ROWS)
     fake_data = {"^GSPC": good_df, "^DJI": good_df, "^IXIC": good_df}
-    with patch("cli.fetch_all", return_value=(fake_data, {})):
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
             main()
             output = fake_out.getvalue()
     assert "Regime:" in output
     assert "=== Overall Market Summary ===" in output
+
+def test_build_regime_report_one_ticker():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"^GSPC": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(use_sectors=False)
+    assert report["overall_fetched_count"] == 1
+    assert report["tickers"]["^GSPC"]["ok"] is True
+    assert report["tickers"]["^GSPC"]["regime"]["label"] in ("BULLISH", "BEARISH", "NEUTRAL")
+    assert "Americas" in report["regions"]
+
+def test_build_regime_report_sectors_mode():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"XLE": good_df, "XLK": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(use_sectors=True)
+    assert report["use_sectors"] is True
+    assert "Sectors" in report["regions"]
+    assert report["overall_fetched_count"] == 2
+    assert report["tickers"]["XLE"]["ok"] and report["tickers"]["XLK"]["ok"]
+    assert report["regions"]["Sectors"]["summary"]["tickers_used"] == 2
+
+
+def test_build_regime_report_empty_fetch():
+    with patch("regime.data.fetch_all", return_value=({}, {})):
+        report = build_regime_report(use_sectors=False)
+    assert report["overall_fetched_count"] == 0
+    assert report["regions"] == {}
+    assert report["tickers"] == {}
+
+def test_cli_sectors_mode_prints_sector_summary():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"XLE": good_df, "XLK": good_df}
+    old_argv = sys.argv
+    try:
+        sys.argv = ["cli.py", "--sectors"]
+        with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+            with patch("sys.stdout", new_callable=StringIO) as fake_out:
+                main()
+                output = fake_out.getvalue()
+    finally:
+        sys.argv = old_argv
+    assert "=== Sector Summary ===" in output
+    assert "XLE" in output and "XLK" in output
+
