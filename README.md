@@ -347,6 +347,29 @@ python3 -m pytest -q              # run all tests
 
 ---
 
+## Daily Workflow
+
+Each trading day, run these four steps in order:
+
+```bash
+# 1. Pull latest code
+git pull
+
+# 2. Run global index report
+source .venv/bin/activate
+python3 cli.py
+
+# 3. Run US sector report
+python3 cli.py --sectors
+
+# 4. Save today's brief
+# Create briefs/YYYY-MM-DD.md with verdicts, scores, and gameplan
+```
+
+Briefs are saved as `briefs/YYYY-MM-DD.md` — one file per day, building a historical record you can look back on.
+
+---
+
 ## Important Notes
 
 - This is a checklist tool, not financial advice.
