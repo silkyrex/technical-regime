@@ -13,7 +13,7 @@ from regime.indicators import (
     trend_structure,
 )
 from regime.data import fetch, MIN_ROWS
-from regime.report import build_regime_report
+from regime.report import build_regime_report, normalize_tickers_csv
 from cli import main
 
 
@@ -217,7 +217,7 @@ def test_cli_skips_ticker_when_moving_averages_fails():
 
     with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
-            main()
+            main([])
             output = fake_out.getvalue()
 
     assert "^GSPC skipped:" in output
@@ -291,7 +291,7 @@ def test_cli_prints_key_levels_block():
     fake_data = {"^GSPC": good_df}
     with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
-            main()
+            main([])
             output = fake_out.getvalue()
     assert "Levels:" in output
     assert "ATH" in output and "RHigh" in output and "PSLow" in output
@@ -349,7 +349,7 @@ def test_cli_prints_phase6_summary_lines():
     fake_data = {"^GSPC": good_df, "^DJI": good_df, "^IXIC": good_df}
     with patch("regime.data.fetch_all", return_value=(fake_data, {})):
         with patch("sys.stdout", new_callable=StringIO) as fake_out:
-            main()
+            main([])
             output = fake_out.getvalue()
     assert "Regime:" in output
     assert "=== Overall Market Summary ===" in output
@@ -391,10 +391,24 @@ def test_cli_sectors_mode_prints_sector_summary():
         sys.argv = ["cli.py", "--sectors"]
         with patch("regime.data.fetch_all", return_value=(fake_data, {})):
             with patch("sys.stdout", new_callable=StringIO) as fake_out:
-                main()
+                main(["--sectors"])
                 output = fake_out.getvalue()
     finally:
         sys.argv = old_argv
     assert "=== Sector Summary ===" in output
     assert "XLE" in output and "XLK" in output
+
+
+def test_build_regime_report_custom_tickers_bucket_order_preserved():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"AAPL": good_df, "MSFT": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(tickers=["AAPL", "MSFT"])
+    assert report["custom_tickers"] == ["AAPL", "MSFT"]
+    assert "Custom" in report["regions"]
+    assert report["regions"]["Custom"]["tickers"] == ["AAPL", "MSFT"]
+
+
+def test_normalize_tickers_csv_trims_dedupes_and_drops_empty():
+    assert normalize_tickers_csv(" AAPL, MSFT,,AAPL ") == ["AAPL", "MSFT"]
 

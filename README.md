@@ -52,6 +52,12 @@ python3 cli.py
 
 That's it. You'll see a global market health report grouped by region. It takes a few seconds because it's downloading live market data.
 
+To run **your own stock tickers** (comma-separated) instead:
+
+```bash
+python3 cli.py --tickers AAOI,TSLA,AAPL
+```
+
 
 
 ### Step 4b: Web UI (optional, same data)
@@ -65,6 +71,11 @@ streamlit run app.py --server.address localhost
 Or without activating: `.venv/bin/streamlit run app.py --server.address localhost`
 
 Open **http://localhost:8501** in your browser (Streamlit prints the URL). Use the sidebar for **Global indexes** vs **US sectors**, and **Refresh data** to bypass the ~2 minute cache and pull Yahoo again. The dev server uses **localhost** only (see `.streamlit/config.toml`).
+
+To use **your own stock tickers** in the UI:
+
+- Sidebar → **Universe** → **Custom**
+- Enter tickers like: `AAOI, TSLA, AAPL`
 
 #### Web UI troubleshooting
 

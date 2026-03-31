@@ -1,6 +1,8 @@
-import sys
+from __future__ import annotations
 
-from regime.report import SECTOR_NAMES, TICKER_NAMES, build_regime_report
+import argparse
+
+from regime.report import SECTOR_NAMES, TICKER_NAMES, build_regime_report, normalize_tickers_csv
 from regime.indicators import market_regime
 
 _GREEN = "\033[32m"
@@ -89,9 +91,23 @@ def _print_summary(label: str, ticker_regimes: dict, total_fetched: int) -> None
     print(f"Average net:   {summary['average_net_score']:+.2f}{suffix}")
 
 
-def main() -> None:
-    use_sectors = "--sectors" in sys.argv
-    report = build_regime_report(use_sectors=use_sectors)
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description="Technical Regime — market regime checklist")
+    parser.add_argument("--sectors", action="store_true", help="Run US sector ETF universe")
+    parser.add_argument(
+        "--tickers",
+        type=str,
+        default=None,
+        help="Custom comma-separated tickers, e.g. AAPL,MSFT,NVDA",
+    )
+    args = parser.parse_args(argv)
+
+    tickers = normalize_tickers_csv(args.tickers) if args.tickers else None
+    if args.tickers is not None and not tickers:
+        print("Error: no tickers provided. Example: --tickers AAPL,MSFT")
+        raise SystemExit(1)
+
+    report = build_regime_report(use_sectors=args.sectors, tickers=tickers)
 
     for t, reason in report["fetch_errors"].items():
         print(f"\n{t} skipped: {reason}")
@@ -102,7 +118,16 @@ def main() -> None:
 
     tickers = report["tickers"]
 
-    if use_sectors:
+    if report.get("custom_tickers"):
+        ticker_regimes: dict = {}
+        info = report["regions"]["Custom"]
+        for ticker in info["tickers"]:
+            row = tickers[ticker]
+            _print_ticker_row(ticker, row, ticker_regimes)
+        _print_summary("Custom", ticker_regimes, info["fetched_count"])
+        return
+
+    if report["use_sectors"]:
         ticker_regimes: dict = {}
         info = report["regions"]["Sectors"]
         for ticker in info["tickers"]:

@@ -2,6 +2,7 @@
 
 Return dict keys (stable contract):
   use_sectors: bool
+  custom_tickers: list[str] | None
   fetch_errors: ticker -> message (fetch failed)
   tickers: ticker -> row dict with ok=True/False; if ok: display_name, close, ma, trend, levels, regime
   regions: region_name -> {summary, tickers (order), fetched_count}
@@ -60,9 +61,40 @@ def _display_name(ticker: str, use_sectors: bool) -> str:
         return SECTOR_NAMES.get(ticker, ticker)
     return TICKER_NAMES.get(ticker, ticker)
 
+def normalize_tickers_csv(csv: str) -> list[str]:
+    """Parse a comma-separated ticker string into a normalized list.
 
-def build_regime_report(use_sectors: bool = False) -> dict:
-    tickers_list = data.SECTOR_TICKERS if use_sectors else data.TICKERS
+    Rules:
+    - Split on commas
+    - Trim whitespace
+    - Drop empty entries
+    - De-duplicate while preserving first-seen order
+
+    We intentionally do NOT over-validate formats; Yahoo tickers can include
+    symbols like '^', '.', '-' (e.g. '^GSPC', '000001.SS', 'BRK-B').
+    """
+    if csv is None:
+        return []
+    parts = [p.strip() for p in str(csv).split(",")]
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in parts:
+        if not p:
+            continue
+        if p in seen:
+            continue
+        seen.add(p)
+        out.append(p)
+    return out
+
+
+def build_regime_report(use_sectors: bool = False, tickers: list[str] | None = None) -> dict:
+    custom_tickers = None if not tickers else list(tickers)
+    if custom_tickers:
+        tickers_list = custom_tickers
+        use_sectors = False
+    else:
+        tickers_list = data.SECTOR_TICKERS if use_sectors else data.TICKERS
     raw, fetch_errors = data.fetch_all(tickers_list)
 
     tickers: dict = {}
@@ -86,7 +118,21 @@ def build_regime_report(use_sectors: bool = False) -> dict:
         }
 
     regions: dict = {}
-    if use_sectors:
+    if custom_tickers:
+        order = [t for t in custom_tickers if t in raw]
+        regs = {
+            t: tickers[t]["regime"]
+            for t in order
+            if t in tickers and tickers[t].get("ok")
+        }
+        regions["Custom"] = {
+            "summary": market_regime(regs),
+            "tickers": order,
+            "fetched_count": len(order),
+        }
+        overall = market_regime(regs)
+        overall_fetched = len(raw)
+    elif use_sectors:
         order = [t for t in data.SECTOR_TICKERS if t in raw]
         regs = {
             t: tickers[t]["regime"]
@@ -122,6 +168,7 @@ def build_regime_report(use_sectors: bool = False) -> dict:
 
     return {
         "use_sectors": use_sectors,
+        "custom_tickers": custom_tickers,
         "fetch_errors": fetch_errors,
         "tickers": tickers,
         "regions": regions,
