@@ -123,8 +123,8 @@ SECTOR_NAMES = {
 }
 
 
-def _display_name(ticker: str, use_sectors: bool) -> str:
-    if use_sectors:
+def _display_name(ticker: str, is_sectors: bool) -> str:
+    if is_sectors:
         return SECTOR_NAMES.get(ticker, ticker)
     return TICKER_NAMES.get(ticker, ticker)
 
@@ -154,14 +154,15 @@ def _single_region_block(
 ) -> tuple[dict, dict, int]:
     order = [t for t in order_source if t in raw]
     regs = {t: tickers[t]["regime"] for t in order if t in tickers and tickers[t].get("ok")}
+    summary = market_regime(regs)
     regions = {
         region_label: {
-            "summary": market_regime(regs),
+            "summary": summary,
             "tickers": order,
             "fetched_count": len(order),
         }
     }
-    return regions, market_regime(regs), len(raw)
+    return regions, summary, len(raw)
 
 
 def build_regime_report(
@@ -199,7 +200,7 @@ def build_regime_report(
         regime = ticker_regime(ma_result, trend_result, levels_result)
         tickers[ticker] = {
             "ok": True,
-            "display_name": _display_name(ticker, use_sectors),
+            "display_name": _display_name(ticker, is_sectors=use_sectors),
             "close": float(ma_result["price"]),
             "ma": ma_result,
             "trend": trend_result,
