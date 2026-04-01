@@ -16,6 +16,7 @@ Return dict keys (stable contract):
 from __future__ import annotations
 
 from regime import data
+from regime import indicators
 from regime.indicators import key_levels, market_regime, moving_averages, ticker_regime, trend_structure
 
 TICKER_NAMES = {
@@ -171,6 +172,7 @@ def build_regime_report(
     use_futures: bool = False,
     use_currencies: bool = False,
     tickers: list[str] | None = None,
+    ma_periods: list[int] | None = None,
 ) -> dict:
     custom_tickers = None if not tickers else list(tickers)
     if custom_tickers:
@@ -186,12 +188,16 @@ def build_regime_report(
         tickers_list = data.CURRENCY_TICKERS
     else:
         tickers_list = data.TICKERS
-    raw, fetch_errors = data.fetch_all(tickers_list)
+    min_rows = data.MIN_ROWS
+    if ma_periods:
+        max_period = max(ma_periods)
+        min_rows = max(60, max_period + indicators.SLOPE_LOOKBACK + 1)
+    raw, fetch_errors = data.fetch_all(tickers_list, min_rows=min_rows)
 
     tickers: dict = {}
     for ticker, df in raw.items():
         try:
-            ma_result = moving_averages(df)
+            ma_result = moving_averages(df, periods=ma_periods)
         except ValueError as exc:
             tickers[ticker] = {"ok": False, "error": str(exc)}
             continue

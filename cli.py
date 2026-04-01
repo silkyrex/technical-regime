@@ -104,19 +104,29 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="Custom comma-separated tickers, e.g. AAPL,MSFT,NVDA",
     )
+    parser.add_argument(
+        "--no-200",
+        action="store_true",
+        help="For --tickers only: skip the 200-day MA (allows shorter history).",
+    )
     args = parser.parse_args(argv)
 
     tickers = normalize_tickers_csv(args.tickers) if args.tickers else None
     if args.tickers is not None and not tickers:
         print("Error: no tickers provided. Example: --tickers AAPL,MSFT")
         raise SystemExit(1)
+    if args.no_200 and not tickers:
+        print("Error: --no-200 only works with --tickers.")
+        raise SystemExit(1)
 
+    ma_periods = [10, 20, 50, 100] if args.no_200 else None
     report = build_regime_report(
         use_sectors=args.sectors,
         use_bonds=args.bonds,
         use_futures=args.futures,
         use_currencies=args.currencies,
         tickers=tickers,
+        ma_periods=ma_periods,
     )
 
     for t, reason in report["fetch_errors"].items():

@@ -1,6 +1,7 @@
 import sys
 
 import pandas as pd
+import pytest
 from unittest.mock import patch
 from io import StringIO
 from regime.indicators import (
@@ -411,6 +412,13 @@ def test_build_regime_report_custom_tickers_bucket_order_preserved():
 
 def test_normalize_tickers_csv_trims_dedupes_and_drops_empty():
     assert normalize_tickers_csv(" AAPL, MSFT,,AAPL ") == ["AAPL", "MSFT"]
+
+
+def test_cli_no_200_requires_tickers():
+    with patch("sys.stdout", new_callable=StringIO) as fake_out:
+        with pytest.raises(SystemExit):
+            main(["--no-200"])
+        assert "only works with --tickers" in fake_out.getvalue().lower()
 
 
 def test_build_regime_report_bonds_preset():

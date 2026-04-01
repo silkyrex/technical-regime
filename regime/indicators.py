@@ -14,7 +14,7 @@ REGIME_BULLISH_MIN = 2
 REGIME_BEARISH_MAX = -2
 
 
-def moving_averages(df: pd.DataFrame) -> dict:
+def moving_averages(df: pd.DataFrame, periods: list[int] | None = None) -> dict:
     """Compute SMAs, price-relative position, and slope direction for a single ticker.
 
     Slope compares today's MA to the value SLOPE_LOOKBACK bars ago. If equal (flat),
@@ -23,8 +23,11 @@ def moving_averages(df: pd.DataFrame) -> dict:
     close = df["Close"]
     current_price = close.iloc[-1]
 
+    if periods is None:
+        periods = MA_PERIODS
+
     results = {}
-    for period in MA_PERIODS:
+    for period in periods:
         ma_series = close.rolling(period).mean()
         ma_value = ma_series.iloc[-1]
         if pd.isna(ma_value):

@@ -33,7 +33,7 @@ CURRENCY_TICKERS = [
 MIN_ROWS = 200
 REQUIRED_COLUMNS = ["Open", "High", "Low", "Close"]
 
-def fetch(ticker: str, period: str = "2y") -> pd.DataFrame:
+def fetch(ticker: str, period: str = "2y", min_rows: int = MIN_ROWS) -> pd.DataFrame:
     """Fetch daily OHLCV for a single ticker. Returns a clean DataFrame."""
     df = yf.Ticker(ticker).history(period=period)
     if df.empty:
@@ -48,11 +48,13 @@ def fetch(ticker: str, period: str = "2y") -> pd.DataFrame:
         raise ValueError(
             f"All rows for {ticker} have missing OHLC values after cleaning."
         )
-    if len(df) < MIN_ROWS:
-        raise ValueError(f"Only {len(df)} rows for {ticker}. Need at least {MIN_ROWS}.")
+    if len(df) < min_rows:
+        raise ValueError(f"Only {len(df)} rows for {ticker}. Need at least {min_rows}.")
     return df
 
-def fetch_all(tickers: list[str] | None = None, period: str = "2y") -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
+def fetch_all(
+    tickers: list[str] | None = None, period: str = "2y", min_rows: int = MIN_ROWS
+) -> tuple[dict[str, pd.DataFrame], dict[str, str]]:
     """Fetch data for given tickers (defaults to TICKERS). Returns (data, errors) dicts."""
     if tickers is None:
         tickers = TICKERS
@@ -60,7 +62,7 @@ def fetch_all(tickers: list[str] | None = None, period: str = "2y") -> tuple[dic
     errors = {}
     for t in tickers:
         try:
-            results[t] = fetch(t, period)
+            results[t] = fetch(t, period, min_rows=min_rows)
         except ValueError as exc:
             errors[t] = str(exc)
     return results, errors
