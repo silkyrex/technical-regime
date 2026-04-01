@@ -192,11 +192,11 @@ This runs all the automated checks to make sure the code is working correctly. I
 | ZN=F | 10-year T-Note futures |
 | ZT=F | 2-year T-Note futures |
 
-**Futures** (`python3 cli.py --futures`): metals, energy, equity indices, rates, grains, livestock, and softs (30+ continuous contracts). See `FUTURES_TICKERS` in [`regime/data.py`](regime/data.py).
+**Futures** (`python3 cli.py --futures`): metals, energy, equity indices, rates, grains, livestock, and softs (30+ continuous contracts). The futures preset includes some **rates futures** (like `ZN=F` / `ZT=F`) that also appear in the **Bonds / rates** preset; the symbol lists are defined separately. See `FUTURES_TICKERS` in [`regime/data.py`](regime/data.py).
 
 **Currencies** (`python3 cli.py --currencies`): 23 FX pairs (majors, crosses, and USD vs EM). See `CURRENCY_TICKERS` in [`regime/data.py`](regime/data.py).
 
-**Tip:** Some futures or thin FX symbols may show as **skipped** if Yahoo returns fewer than ~200 daily bars — the rest of the report still runs.
+**Tip:** Some futures or thin FX symbols may show as **skipped** if Yahoo returns fewer than ~200 daily bars — the rest of the report still runs. Also, a few continuous futures symbols (example: `B0=F`) may occasionally return no data from Yahoo; that will also show as “skipped”.
 
 ### What to do with the output
 
