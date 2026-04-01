@@ -93,8 +93,12 @@ def _print_summary(label: str, ticker_regimes: dict, total_fetched: int) -> None
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Technical Regime — market regime checklist")
-    parser.add_argument("--sectors", action="store_true", help="Run US sector ETF universe")
-    parser.add_argument(
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument("--sectors", action="store_true", help="Run US sector ETF universe")
+    g.add_argument("--bonds", action="store_true", help="Run bonds / Treasury yields preset")
+    g.add_argument("--futures", action="store_true", help="Run futures preset")
+    g.add_argument("--currencies", action="store_true", help="Run FX preset")
+    g.add_argument(
         "--tickers",
         type=str,
         default=None,
@@ -107,7 +111,13 @@ def main(argv: list[str] | None = None) -> None:
         print("Error: no tickers provided. Example: --tickers AAPL,MSFT")
         raise SystemExit(1)
 
-    report = build_regime_report(use_sectors=args.sectors, tickers=tickers)
+    report = build_regime_report(
+        use_sectors=args.sectors,
+        use_bonds=args.bonds,
+        use_futures=args.futures,
+        use_currencies=args.currencies,
+        tickers=tickers,
+    )
 
     for t, reason in report["fetch_errors"].items():
         print(f"\n{t} skipped: {reason}")
@@ -134,6 +144,33 @@ def main(argv: list[str] | None = None) -> None:
             row = tickers[ticker]
             _print_ticker_row(ticker, row, ticker_regimes)
         _print_summary("Sector", ticker_regimes, info["fetched_count"])
+        return
+
+    if report["use_bonds"]:
+        ticker_regimes = {}
+        info = report["regions"]["Bonds"]
+        for ticker in info["tickers"]:
+            row = tickers[ticker]
+            _print_ticker_row(ticker, row, ticker_regimes)
+        _print_summary("Bonds", ticker_regimes, info["fetched_count"])
+        return
+
+    if report["use_futures"]:
+        ticker_regimes = {}
+        info = report["regions"]["Futures"]
+        for ticker in info["tickers"]:
+            row = tickers[ticker]
+            _print_ticker_row(ticker, row, ticker_regimes)
+        _print_summary("Futures", ticker_regimes, info["fetched_count"])
+        return
+
+    if report["use_currencies"]:
+        ticker_regimes = {}
+        info = report["regions"]["Currencies"]
+        for ticker in info["tickers"]:
+            row = tickers[ticker]
+            _print_ticker_row(ticker, row, ticker_regimes)
+        _print_summary("Currencies", ticker_regimes, info["fetched_count"])
         return
 
     for region_name, info in report["regions"].items():

@@ -25,13 +25,27 @@ if "refresh_token" not in st.session_state:
     st.session_state.refresh_token = 0
 
 with st.sidebar:
-    mode = st.radio("Universe", ["Global indexes", "US sectors", "Custom"], index=0)
+    mode = st.radio(
+        "Universe",
+        [
+            "Global indexes",
+            "US sectors",
+            "Bonds / rates",
+            "Futures",
+            "Currencies",
+            "Custom",
+        ],
+        index=0,
+    )
     st.caption("Data from Yahoo Finance via yfinance.")
     st.caption(f"Cached ~{CACHE_TTL_SECONDS // 60} min. Use **Refresh data** to fetch again.")
     if st.button("Refresh data"):
         st.session_state.refresh_token += 1
 
 use_sectors = mode == "US sectors"
+use_bonds = mode == "Bonds / rates"
+use_futures = mode == "Futures"
+use_currencies = mode == "Currencies"
 custom_tickers: list[str] | None = None
 tickers_key = ""
 if mode == "Custom":
@@ -44,13 +58,33 @@ if mode == "Custom":
 
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Loading market data…")
-def load_report(use_sectors_flag: bool, token: int, tickers_csv: str) -> dict:
+def load_report(
+    use_sectors_flag: bool,
+    use_bonds_flag: bool,
+    use_futures_flag: bool,
+    use_currencies_flag: bool,
+    token: int,
+    tickers_csv: str,
+) -> dict:
     _ = token
     tickers = normalize_tickers_csv(tickers_csv) if tickers_csv else None
-    return build_regime_report(use_sectors=use_sectors_flag, tickers=tickers)
+    return build_regime_report(
+        use_sectors=use_sectors_flag,
+        use_bonds=use_bonds_flag,
+        use_futures=use_futures_flag,
+        use_currencies=use_currencies_flag,
+        tickers=tickers,
+    )
 
 
-report = load_report(use_sectors, st.session_state.refresh_token, tickers_key)
+report = load_report(
+    use_sectors,
+    use_bonds,
+    use_futures,
+    use_currencies,
+    st.session_state.refresh_token,
+    tickers_key,
+)
 
 for sym, msg in report["fetch_errors"].items():
     st.warning(f"{sym}: fetch skipped — {msg}")

@@ -412,3 +412,33 @@ def test_build_regime_report_custom_tickers_bucket_order_preserved():
 def test_normalize_tickers_csv_trims_dedupes_and_drops_empty():
     assert normalize_tickers_csv(" AAPL, MSFT,,AAPL ") == ["AAPL", "MSFT"]
 
+
+def test_build_regime_report_bonds_preset():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"^TNX": good_df, "^IRX": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(use_bonds=True)
+    assert report["use_bonds"] is True
+    assert "Bonds" in report["regions"]
+    assert report["regions"]["Bonds"]["summary"]["tickers_used"] == 2
+
+
+def test_build_regime_report_futures_preset():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"CL=F": good_df, "GC=F": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(use_futures=True)
+    assert report["use_futures"] is True
+    assert "Futures" in report["regions"]
+    assert report["regions"]["Futures"]["summary"]["tickers_used"] == 2
+
+
+def test_build_regime_report_currencies_preset():
+    good_df = _make_ohlcv_df(MIN_ROWS)
+    fake_data = {"EURUSD=X": good_df, "USDJPY=X": good_df}
+    with patch("regime.data.fetch_all", return_value=(fake_data, {})):
+        report = build_regime_report(use_currencies=True)
+    assert report["use_currencies"] is True
+    assert "Currencies" in report["regions"]
+    assert report["regions"]["Currencies"]["summary"]["tickers_used"] == 2
+

@@ -15,6 +15,21 @@ REGIONS = {
 
 TICKERS = AMERICAS_TICKERS + EUROPE_TICKERS + ASIA_TICKERS
 SECTOR_TICKERS = ["XLE", "XLU", "XLRE", "XLP", "XLF", "XLB", "XLY", "XLI", "XLC", "XLK"]
+
+BOND_TICKERS = ["^TNX", "ZT=F", "ZN=F", "^IRX", "^FVX", "^TYX"]
+
+FUTURES_TICKERS = [
+    "SI=F", "CL=F", "ES=F", "YM=F", "NQ=F", "RTY=F", "ZB=F", "ZN=F", "ZF=F", "ZT=F", "GC=F", "MGC=F",
+    "SIL=F", "PL=F", "HG=F", "PA=F", "HO=F", "NG=F", "RB=F", "BZ=F", "B0=F", "ZC=F", "ZO=F", "KE=F", "ZR=F",
+    "ZM=F", "ZL=F", "ZS=F", "GF=F", "HE=F", "LE=F", "CC=F", "KC=F", "CT=F", "LBS=F", "OJ=F", "SB=F",
+]
+
+CURRENCY_TICKERS = [
+    "EURUSD=X", "USDJPY=X", "GBPUSD=X", "AUDUSD=X", "NZDUSD=X", "EURJPY=X", "GBPJPY=X", "EURGBP=X",
+    "EURCAD=X", "EURSEK=X", "EURCHF=X", "EURHUF=X", "USDCNY=X", "USDHKD=X", "USDSGD=X", "USDINR=X",
+    "USDMXN=X", "USDPHP=X", "USDIDR=X", "USDTHB=X", "USDMYR=X", "USDZAR=X", "USDRUB=X",
+]
+
 MIN_ROWS = 200
 REQUIRED_COLUMNS = ["Open", "High", "Low", "Close"]
 

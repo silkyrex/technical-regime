@@ -1,6 +1,6 @@
 # Technical Regime (Beginner-Friendly)
 
-A global market regime checklist covering 24 indexes and currency indexes across Americas, Europe, and Asia — plus 10 US sectors.
+A global market regime checklist covering 24 indexes and currency indexes across Americas, Europe, and Asia — plus 10 US sectors. The CLI and Streamlit UI also offer **bonds/rates**, **futures**, and **FX** presets (fixed Yahoo ticker lists).
 
 This project does **not** try to predict the future.
 It gives you a clean, objective checklist so you can see whether market conditions look healthy, weak, or mixed — across the world, not just the US.
@@ -34,6 +34,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+**Shortcut:** from the project root, run `./scripts/init.sh` once (creates `.venv` and installs `requirements.txt`).
+
 You only create `.venv` once. Later, open a new terminal, `cd` to the project, then run `source .venv/bin/activate` before `cli.py` or Streamlit.
 
 **Alternative:** install into your user Python (may need `pip3`):
@@ -58,7 +60,24 @@ To run **your own stock tickers** (comma-separated) instead:
 python3 cli.py --tickers AAOI,TSLA,AAPL
 ```
 
+**Preset universes** (pick **one** in the CLI — they cannot be combined with each other or with `--tickers`; the Streamlit sidebar works the same way):
 
+| Flag | What it runs |
+|------|----------------|
+| *(default)* | 24 global indexes (Americas, Europe, Asia) |
+| `--sectors` | 10 US sector ETFs (XLE … XLK) |
+| `--bonds` | Treasury yields + Treasury futures |
+| `--futures` | Commodity and equity-index futures (Yahoo continuous symbols) |
+| `--currencies` | Major and cross FX pairs (`…=X`) |
+
+```bash
+python3 cli.py --sectors
+python3 cli.py --bonds
+python3 cli.py --futures
+python3 cli.py --currencies
+```
+
+Exact symbol lists live in [`regime/data.py`](regime/data.py) (`BOND_TICKERS`, `FUTURES_TICKERS`, `CURRENCY_TICKERS`). Human-readable labels are in [`regime/report.py`](regime/report.py) (`TICKER_NAMES`).
 
 ### Step 4b: Web UI (optional, same data)
 
@@ -70,7 +89,7 @@ streamlit run app.py --server.address localhost
 
 Or without activating: `.venv/bin/streamlit run app.py --server.address localhost`
 
-Open **http://localhost:8501** in your browser (Streamlit prints the URL). Use the sidebar for **Global indexes** vs **US sectors**, and **Refresh data** to bypass the ~2 minute cache and pull Yahoo again. The dev server uses **localhost** only (see `.streamlit/config.toml`).
+Open **http://localhost:8501** in your browser (Streamlit prints the URL). Use the sidebar for **Global indexes**, **US sectors**, **Bonds / rates**, **Futures**, **Currencies**, or **Custom**, and **Refresh data** to bypass the ~2 minute cache and pull Yahoo again. The dev server uses **localhost** only (see `.streamlit/config.toml`).
 
 To use **your own stock tickers** in the UI:
 
@@ -85,12 +104,6 @@ To use **your own stock tickers** in the UI:
 | `Address already in use` / port busy | Another Streamlit is running. Stop it (Ctrl+C in that terminal) or run `streamlit run app.py --server.port 8502 --server.address localhost`. |
 | `Permission denied` when using `pip` | Use the **venv** flow in Step 3 instead of installing into system Python. |
 | Blank page or “no data” | Check internet; click **Refresh data**; wait for Yahoo to respond. |
-
-To run **US sector analysis** instead:
-
-```bash
-python3 cli.py --sectors
-```
 
 ### Step 5: Read the output
 
@@ -168,6 +181,23 @@ This runs all the automated checks to make sure the code is working correctly. I
 | XLRE | Real Estate |
 | XLB | Materials |
 
+**Bonds / rates** (`python3 cli.py --bonds`):
+
+| Ticker | What it tracks |
+|--------|----------------|
+| ^TNX | US 10-year Treasury yield |
+| ^IRX | US 13-week T-Bill yield |
+| ^FVX | US 5-year Treasury yield |
+| ^TYX | US 30-year Treasury yield |
+| ZN=F | 10-year T-Note futures |
+| ZT=F | 2-year T-Note futures |
+
+**Futures** (`python3 cli.py --futures`): metals, energy, equity indices, rates, grains, livestock, and softs (30+ continuous contracts). See `FUTURES_TICKERS` in [`regime/data.py`](regime/data.py).
+
+**Currencies** (`python3 cli.py --currencies`): 23 FX pairs (majors, crosses, and USD vs EM). See `CURRENCY_TICKERS` in [`regime/data.py`](regime/data.py).
+
+**Tip:** Some futures or thin FX symbols may show as **skipped** if Yahoo returns fewer than ~200 daily bars — the rest of the report still runs.
+
 ### What to do with the output
 
 - **All tickers BULLISH** — Market looks broadly healthy globally
@@ -178,7 +208,7 @@ This runs all the automated checks to make sure the code is working correctly. I
 
 - **"No module named 'yfinance'"** — Run `pip install -r requirements.txt` again
 - **"No data returned for X"** — Your internet might be down, or the market data service is temporarily unavailable. Try again in a minute.
-- **A ticker says "skipped"** — That ticker failed to fetch data. The rest still work. Check your internet connection.
+- **A ticker says "skipped"** — Fetch failed or not enough history (the tool needs about **200 trading days** of daily data per symbol). The rest of the report still runs.
 
 ### Vocabulary cheat sheet
 
@@ -334,6 +364,7 @@ Short-term signals flip often. Longer signals change slowly and carry more weigh
 technical-regime/
   cli.py               # terminal report
   app.py               # Streamlit web UI (localhost)
+  scripts/init.sh      # one-shot venv + pip install (optional)
   requirements.txt     # yfinance, pandas, streamlit
   regime/
     data.py            # fetch + validate OHLC
@@ -348,10 +379,14 @@ technical-regime/
 ## Quick Start
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate   # once per machine; then use activate in new terminals
-pip install -r requirements.txt
-python3 cli.py                    # global market report
-python3 cli.py --sectors          # US sector breakdown
+./scripts/init.sh                 # optional: creates .venv + installs deps (or follow Step 3 manually)
+source .venv/bin/activate         # each new terminal
+python3 cli.py                    # global indexes (default)
+python3 cli.py --sectors          # US sectors
+python3 cli.py --bonds            # rates / Treasury
+python3 cli.py --futures          # futures universe
+python3 cli.py --currencies       # FX universe
+python3 cli.py --tickers AAPL,MSFT   # custom list (cannot mix with presets above)
 streamlit run app.py --server.address localhost   # web UI → http://localhost:8501
 python3 -m pytest -q              # run all tests
 ```
@@ -370,8 +405,11 @@ git pull
 source .venv/bin/activate
 python3 cli.py
 
-# 3. Run US sector report
+# 3. Run US sector report (and any other presets you care about)
 python3 cli.py --sectors
+# python3 cli.py --bonds
+# python3 cli.py --futures
+# python3 cli.py --currencies
 
 # 4. Save today's brief
 # Create briefs/YYYY-MM-DD.md with verdicts, scores, and gameplan
@@ -391,7 +429,7 @@ Briefs are saved as `briefs/YYYY-MM-DD.md` — one file per day, building a hist
 
 ## What's Next (Ideas)
 
-- Colorized terminal output (green/red/yellow) — web UI already color-codes regime
+- Shorter “brief” CLI mode (one line per ticker / region) alongside the full report
 - Historical regime tracking (save daily snapshots)
 - Multi-timeframe analysis (weekly + daily)
 - Sector rotation signals
@@ -401,4 +439,4 @@ Briefs are saved as `briefs/YYYY-MM-DD.md` — one file per day, building a hist
 
 ## One-Line Summary
 
-Global market regime dashboard: **24 indexes across Americas, Europe, and Asia** scored on MA position, MA slope, trend structure, and key levels — green when signals agree bullish, red when bearish, yellow when mixed.
+Global market regime dashboard: **24 indexes across Americas, Europe, and Asia**, plus optional **sectors**, **bonds/rates**, **futures**, and **FX** presets — each ticker scored on MA position, MA slope, trend structure, and key levels (CLI uses green/red/yellow; Streamlit color-codes tables).
