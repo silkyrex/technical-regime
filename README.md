@@ -1,9 +1,34 @@
-# Technical Regime (Beginner-Friendly)
+# Technical Regime
 
-A global market regime checklist covering 24 indexes and currency indexes across Americas, Europe, and Asia — plus 10 US sectors. The CLI and Streamlit UI also offer **bonds/rates**, **futures**, and **FX** presets (fixed Yahoo ticker lists).
+Global market regime dashboard for **indexes, sectors, bonds, futures, and FX**.
 
-This project does **not** try to predict the future.
-It gives you a clean, objective checklist so you can see whether market conditions look healthy, weak, or mixed — across the world, not just the US.
+This project pulls live Yahoo Finance data and scores each ticker on moving-average position, moving-average slope, trend structure, and key levels. The result is a clean checklist you can use to judge whether market conditions look healthy, weak, or mixed.
+
+## Why it exists
+
+Most market dashboards either try to predict too much or overwhelm you with noise. This one is intentionally narrower: it gives you a repeatable daily regime check across major global markets.
+
+## Quick start
+
+```bash
+./scripts/init.sh
+source .venv/bin/activate
+python3 cli.py
+```
+
+Optional modes:
+
+```bash
+python3 cli.py --sectors
+python3 cli.py --bonds
+python3 cli.py --futures
+python3 cli.py --currencies
+streamlit run app.py --server.address localhost
+```
+
+## Status
+
+Personal trading tool. Active project.
 
 ---
 
