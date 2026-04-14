@@ -281,14 +281,14 @@ def market_regime(ticker_regimes: dict[str, dict]) -> dict:
         else:
             counts["neutral"] += 1
 
-    if counts["bullish"] > counts["bearish"]:
+    avg_net = 0.0 if tickers_used == 0 else net_sum / tickers_used
+
+    if avg_net >= 2.0:
         label = "BULLISH"
-    elif counts["bearish"] > counts["bullish"]:
+    elif avg_net <= -1.0:
         label = "BEARISH"
     else:
-        label = "NEUTRAL"
-
-    avg_net = 0.0 if tickers_used == 0 else net_sum / tickers_used
+        label = "MIXED"
     return {
         "label": label,
         "counts": counts,
