@@ -108,7 +108,8 @@ def _ticker_lines(tickers_data: dict, ticker_list: list[str]) -> str:
         net = row["regime"]["net_score"]
         sign = "+" if net > 0 else ""
         emoji = REGIME_EMOJI.get(label, "⚪")
-        lines.append(f"{emoji} {_display_name(t)} ({sign}{net})")
+        arrow = ("↑" if net >= 2 else "↓" if net <= -2 else "") if label == "NEUTRAL" else ""
+        lines.append(f"{emoji} {_display_name(t)} ({sign}{net}{arrow})")
     return "\n".join(lines) or "_No data_"
 
 
@@ -189,8 +190,10 @@ def main() -> None:
     errors = len(report["fetch_errors"])
 
     # Category layout
+    americas_no_vix = [t for t in AMERICAS_TICKERS if t != "^VIX"]
     categories: dict[str, list[str]] = {
-        "Americas": AMERICAS_TICKERS,
+        "VIX": ["^VIX"],
+        "Americas": americas_no_vix,
         "Sectors": SECTOR_TICKERS,
         "Bonds": BOND_TICKERS,
         "Futures": KEY_FUTURES,
