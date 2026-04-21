@@ -1,8 +1,8 @@
 # Technical Regime
 
-Global market regime dashboard for **indexes, sectors, bonds, futures, and FX**.
+Know the regime before you trade.
 
-Pulls live Yahoo Finance data and scores each ticker on MA position, MA slope, trend structure, and key levels. Output: a daily regime check across major global markets.
+Scores 24 global indexes, 10 sector ETFs, bonds, futures, and FX on 4 signals: MA position, MA slope, trend structure, and distance from key levels. Output: BULLISH / BEARISH / NEUTRAL per ticker, every morning in under 5 seconds.
 
 ## Quick start
 
@@ -11,6 +11,8 @@ Pulls live Yahoo Finance data and scores each ticker on MA position, MA slope, t
 source .venv/bin/activate
 python3 cli.py
 ```
+
+For a web view: `streamlit run app.py`
 
 ## CLI flags
 
@@ -22,7 +24,6 @@ python3 cli.py
 | `python3 cli.py --futures` | Commodity + equity-index futures |
 | `python3 cli.py --currencies` | 23 FX pairs |
 | `python3 cli.py --tickers AAPL,MSFT` | Custom tickers |
-| `streamlit run app.py --server.address localhost` | Web UI → http://localhost:8501 |
 
 ## Output format
 
